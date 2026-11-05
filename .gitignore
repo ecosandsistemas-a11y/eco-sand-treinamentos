@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Node (leftover)
+node_modules/
+package-lock.json
+
+# Data / secrets
+# (DB shipped with seed data; remove if you prefer a fresh DB)
+uploads/
+exports/
+*.sqlite
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env

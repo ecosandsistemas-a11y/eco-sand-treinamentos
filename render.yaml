@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: eco-sand-treinamentos
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: cd app && python3 server.py
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: DATA_DIR
+        value: /var/data
+    disk:
+      name: eco-sand-data
+      mountPath: /var/data
+      sizeGB: 1
