@@ -31,7 +31,12 @@ function statusLabel(s){
   return {em_dia:'Treinamento em dia', proximo:'Próximo do vencimento', vencido:'Treinamento Vencido', dados_incompletos:'Dados incompletos'}[s] || s;
 }
 
+function applyTheme() {
+  const dark = localStorage.getItem('eco_theme') === 'dark';
+  document.body.classList.toggle('dark', dark);
+}
 async function init() {
+  applyTheme();
   window.addEventListener('hashchange', () => { state.route = location.hash.replace('#','') || 'dashboard'; render(); });
   try {
     const token = localStorage.getItem('eco_token');
@@ -105,7 +110,7 @@ function layoutView() {
       <div class="topbar">
         <button class="btn hamburger" id="ham">☰</button>
         <h2 id="pageTitle"></h2>
-        <div></div>
+        <button class="btn" id="themeToggle" title="Alternar tema">🌙/☀️</button>
       </div>
       <div id="content"></div>
     </main>
@@ -115,6 +120,11 @@ function layoutView() {
 function bindLayout() {
   $('#logout').onclick = async (e) => { e.preventDefault(); await api('/api/logout',{method:'POST'}); localStorage.removeItem('eco_token'); state.user=null; state.route='dashboard'; try { history.replaceState(null,'','#'); } catch(e){} render(); };
   $('#ham').onclick = () => $('#sidebar').classList.toggle('open');
+  $('#themeToggle').onclick = () => {
+    const dark = !document.body.classList.contains('dark');
+    document.body.classList.toggle('dark', dark);
+    localStorage.setItem('eco_theme', dark ? 'dark' : 'light');
+  };
 }
 
 async function loadRoute() {
