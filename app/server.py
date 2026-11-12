@@ -507,11 +507,19 @@ class Handler(http.server.BaseHTTPRequestHandler):
         # ---- import ----
         if path == '/api/import/preview' and method == 'POST':
             if not require_perm(self, u, 'import'): return
-            # expect file path in body (already in workspace) OR uploaded base64
             body = read_body(self)
             fpath = body.get('file_path')
+            if body.get('content_base64'):
+                import base64, tempfile
+                try:
+                    raw = base64.b64decode(body['content_base64'])
+                except Exception:
+                    json_resp(self, 400, {'error': 'Base64 inválido.'}); return
+                fd, fpath = tempfile.mkstemp(suffix='.xlsm', dir=os.path.join(BASE, '..', 'data'))
+                with os.fdopen(fd, 'wb') as fh:
+                    fh.write(raw)
             if not fpath or not os.path.isfile(fpath):
-                json_resp(self, 400, {'error': 'Arquivo não encontrado. Envie file_path válido.'}); return
+                json_resp(self, 400, {'error': 'Arquivo não encontrado. Envie file_path ou content_base64.'}); return
             try:
                 res = import_xl.preview(fpath)
             except Exception as e:
@@ -522,6 +530,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if not require_perm(self, u, 'import'): return
             body = read_body(self)
             fpath = body.get('file_path')
+            if body.get('content_base64'):
+                import base64, tempfile
+                try:
+                    raw = base64.b64decode(body['content_base64'])
+                except Exception:
+                    json_resp(self, 400, {'error': 'Base64 inválido.'}); return
+                fd, fpath = tempfile.mkstemp(suffix='.xlsm', dir=os.path.join(BASE, '..', 'data'))
+                with os.fdopen(fd, 'wb') as fh:
+                    fh.write(raw)
             if not fpath or not os.path.isfile(fpath):
                 json_resp(self, 400, {'error': 'Arquivo não encontrado.'}); return
             try:

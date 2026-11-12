@@ -1,8 +1,14 @@
 # Implantação (Render + GitHub)
 
-## Repositório
-1. Crie um repositório no GitHub e envie o conteúdo de `/home/user` (exceto `data/` se quiser banco novo).
-2. Mantenha a estrutura: `app/`, `data/`, `docs/`.
+## Repositório (GitHub)
+1. Crie um repositório vazio no GitHub (ex.: `eco-sand-treinamentos`).
+2. No terminal, dentro de `/home/user`:
+   ```bash
+   git remote add origin https://github.com/SEU_USUARIO/eco-sand-treinamentos.git
+   git branch -M main
+   git push -u origin main
+   ```
+3. Mantenha a estrutura: `app/`, `data/`, `docs/`, `requirements.txt`, `Procfile`, `render.yaml`.
 
 ## Render (Web Service)
 - Build command: (nenhum, Python puro) — ou `pip install openpyxl` se quiser importação.

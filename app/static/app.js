@@ -845,19 +845,26 @@ async function viewImportacao(c) {
   c.innerHTML = `
     <div class="card">
       <h3>Importação de dados (Excel)</h3>
-      <p>Informe o caminho do arquivo .xlsm no workspace (ex: google_drive/Planilha de Controle de Vencimento de Treinamentos - Eco Sand.xlsm) ou faça upload via servidor.</p>
-      <div class="form-group"><label>Caminho do arquivo</label><input id="impPath" value="/home/user/google_drive/Planilha de Controle de Vencimento de Treinamentos - Eco Sand.xlsm"></div>
+      <p>Selecione o arquivo .xlsm da planilha original para importar.</p>
+      <div class="form-group"><label>Arquivo .xlsm</label><input type="file" id="impFile" accept=".xlsm,.xlsx"></div>
       <div style="margin-top:8px;">
         <button class="btn" id="btnPreview">Pré-visualizar</button>
         <button class="btn primary" id="btnCommit" disabled>Confirmar importação</button>
       </div>
       <div id="impPreview" style="margin-top:12px;"></div>
     </div>`;
-  let previewData = null;
+  let fileBase64 = null;
+  $('#impFile').addEventListener('change', (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => { fileBase64 = reader.result.split(',')[1]; };
+    reader.readAsDataURL(f);
+  });
   $('#btnPreview').onclick = async () => {
+    if (!fileBase64) { alert('Selecione um arquivo primeiro.'); return; }
     try {
-      const r = await api('/api/import/preview', {method:'POST', body: { file_path: $('#impPath').value }});
-      previewData = r;
+      const r = await api('/api/import/preview', {method:'POST', body: { content_base64: fileBase64 }});
       $('#impPreview').innerHTML = `<div class="card">
         <p><strong>Totais:</strong> setores ${r.totais.setores}, cargos ${r.totais.cargos}, treinamentos ${r.totais.treinamentos}, colaboradores ${r.totais.colaboradores}, lançamentos ${r.totais.lancamentos}</p>
         <p><strong>Avisos:</strong> ${r.warnings_count}</p>
@@ -869,7 +876,7 @@ async function viewImportacao(c) {
   $('#btnCommit').onclick = async () => {
     if (!confirm('Confirmar importação?')) return;
     try {
-      const r = await api('/api/import/commit', {method:'POST', body: { file_path: $('#impPath').value }});
+      const r = await api('/api/import/commit', {method:'POST', body: { content_base64: fileBase64 }});
       alert('Importação concluída. Importados: '+r.importados+' | Ignorados: '+r.ignorados);
       $('#btnCommit').disabled = true;
     } catch(e){ alert(e.message); }
