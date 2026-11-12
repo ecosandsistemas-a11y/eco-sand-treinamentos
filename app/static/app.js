@@ -27,6 +27,7 @@ function $(sel){ return document.querySelector(sel); }
 function el(html){ const d=document.createElement('div'); d.innerHTML=html; return d.firstElementChild; }
 
 function badge(status){ return `<span class="badge ${status}">${statusLabel(status)}</span>`; }
+function badgeAtivo(v){ return `<span class="badge ${v?'ativo':'inativo'}">${v?'Ativo':'Inativo'}</span>`; }
 function statusLabel(s){
   return {em_dia:'Treinamento em dia', proximo:'Próximo do vencimento', vencido:'Treinamento Vencido', dados_incompletos:'Dados incompletos'}[s] || s;
 }
@@ -270,7 +271,7 @@ async function viewSetores(c) {
       <div class="table-wrap" style="margin-top:12px;">
         <table><thead><tr><th>Nome</th><th>Descrição</th><th>Situação</th><th>Ações</th></tr></thead><tbody>
         ${rows.map(r=>`<tr>
-          <td>${r.nome}</td><td>${r.descricao||''}</td><td>${r.ativo?'Ativo':'Inativo'}</td>
+          <td>${r.nome}</td><td>${r.descricao||''}</td><td>${badgeAtivo(r.ativo)}</td>
           <td><button class="btn small" onclick="editarSetor(${r.id},'${esc(r.nome)}','${esc(r.descricao||'')}',${r.ativo})">Editar</button></td>
         </tr>`).join('')}
         </tbody></table>
@@ -312,7 +313,7 @@ async function viewCargos(c) {
       <div class="table-wrap" style="margin-top:12px;">
         <table><thead><tr><th>Nome</th><th>Descrição</th><th>Situação</th><th>Ações</th></tr></thead><tbody>
         ${rows.map(r=>`<tr>
-          <td>${r.nome}</td><td>${r.descricao||''}</td><td>${r.ativo?'Ativo':'Inativo'}</td>
+          <td>${r.nome}</td><td>${r.descricao||''}</td><td>${badgeAtivo(r.ativo)}</td>
           <td><button class="btn small" onclick="editarCargo(${r.id},'${esc(r.nome)}','${esc(r.descricao||'')}')">Editar</button></td>
         </tr>`).join('')}
         </tbody></table>
@@ -354,7 +355,7 @@ async function viewTreinamentos(c) {
         <table><thead><tr><th>Nome</th><th>Código</th><th>Categoria</th><th>Prazo (dias)</th><th>Situação</th><th>Ações</th></tr></thead><tbody>
         ${rows.map(r=>`<tr>
           <td>${r.nome}</td><td>${r.codigo||''}</td><td>${r.categoria||''}</td><td>${r.prazo_validade_dias==null?'Sem validade':r.prazo_validade_dias}</td>
-          <td>${r.ativo?'Ativo':'Inativo'}</td>
+          <td>${badgeAtivo(r.ativo)}</td>
           <td><button class="btn small" onclick="editarTrein(${r.id})">Editar</button></td>
         </tr>`).join('')}
         </tbody></table>
@@ -422,7 +423,7 @@ async function viewColaboradores(c) {
     const rows = await api('/api/colaboradores?'+qs.toString());
     $('#colabTable').innerHTML = `<div class="table-wrap"><table><thead><tr><th>Nome</th><th>Código</th><th>Setor</th><th>Cargo</th><th>Situação</th><th>Ações</th></tr></thead><tbody>
       ${rows.map(r=>`<tr>
-        <td>${r.nome}</td><td>${r.codigo||''}</td><td>${r.setor_nome||''}</td><td>${r.cargo_nome||''}</td><td>${r.ativo?'Ativo':'Inativo'}</td>
+        <td>${r.nome}</td><td>${r.codigo||''}</td><td>${r.setor_nome||''}</td><td>${r.cargo_nome||''}</td><td>${badgeAtivo(r.ativo)}</td>
         <td>
           <button class="btn small" onclick="abrirFicha(${r.id})">Ficha</button>
           <button class="btn small" onclick="editarColab(${r.id})">Editar</button>
@@ -481,7 +482,7 @@ async function abrirFicha(id) {
   const venc = regs.filter(x=>x.status==='vencido').length;
   const inc = regs.filter(x=>x.status==='dados_incompletos').length;
   modal(`<h3>Ficha do colaborador</h3>
-    <p><strong>${c.nome}</strong><br>Código: ${c.codigo||'-'} | Cargo: ${c.cargo_nome||'-'} | Setor: ${c.setor_nome||'-'} | Situação: ${c.ativo?'Ativo':'Inativo'}</p>
+    <p><strong>${c.nome}</strong><br>Código: ${c.codigo||'-'} | Cargo: ${c.cargo_nome||'-'} | Setor: ${c.setor_nome||'-'} | Situação: ${badgeAtivo(c.ativo)}</p>
     <div class="grid cols-4">
       <div class="kpi"><div class="label">Total</div><div class="value">${total}</div></div>
       <div class="kpi success"><div class="label">Em dia</div><div class="value">${emdia}</div></div>
@@ -905,7 +906,7 @@ async function viewUsuarios(c) {
       </div>
       <div class="table-wrap" style="margin-top:12px;">
         <table><thead><tr><th>Usuário</th><th>Nome</th><th>Perfil</th><th>Situação</th></tr></thead><tbody>
-        ${rows.map(r=>`<tr><td>${r.username}</td><td>${r.nome||''}</td><td>${r.role}</td><td>${r.ativo?'Ativo':'Inativo'}</td></tr>`).join('')}</tbody></table>
+        ${rows.map(r=>`<tr><td>${r.username}</td><td>${r.nome||''}</td><td>${r.role}</td><td>${badgeAtivo(r.ativo)}</td></tr>`).join('')}</tbody></table>
       </div>
     </div>`;
   $('#btnNovoUser').onclick = () => {
