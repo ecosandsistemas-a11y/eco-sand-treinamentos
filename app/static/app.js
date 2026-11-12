@@ -54,6 +54,7 @@ function render() {
 
 function loginView() {
   return `<div class="login-wrap"><div class="login-card">
+    <img src="/static/logo.png" alt="Eco Sand" style="max-width:200px;height:auto;margin-bottom:12px;" />
     <h2>Eco Sand | Gestão de Treinamentos</h2>
     <p style="color:#6b7280;font-size:13px;">Acesse com suas credenciais</p>
     <input id="u" placeholder="Usuário" />
@@ -95,7 +96,7 @@ function layoutView() {
   ];
   return `<div class="layout">
     <aside class="sidebar" id="sidebar">
-      <h1>Eco Sand</h1>
+      <img src="/static/logo.png" alt="Eco Sand" style="max-width:100%;height:auto;margin-bottom:8px;" />
       <div class="sub">Gestão de Treinamentos</div>
       <nav>${links.map(([r,l])=>`<a href="#${r}" class="${state.route===r?'active':''}">${l}</a>`).join('')}</nav>
       <div class="userbox">${state.user.nome||state.user.username}<br><small>${state.user.role}</small><br><a href="#" id="logout" style="color:#fff;text-decoration:underline;font-size:12px;">Sair</a></div>
@@ -795,7 +796,7 @@ async function relIndividual() {
   const w = window.open('', '_blank');
   w.document.write(`<!DOCTYPE html><html><head><title>Relatório Individual</title>
     <style>body{font-family:Arial,sans-serif;padding:20px;} table{width:100%;border-collapse:collapse;font-size:12px;} th,td{border:1px solid #ccc;padding:6px;} th{background:#eee;} .header{text-align:center;margin-bottom:20px;} </style></head><body>
-    <div class="header"><h2>Eco Sand</h2><h3>Relatório Individual de Treinamentos</h3><p>Data de emissão: ${new Date().toLocaleDateString('pt-BR')}</p></div>
+    <div class="header"><img src="/static/logo.png" alt="Eco Sand" style="max-height:60px;margin-bottom:8px;" /><h3>Relatório Individual de Treinamentos</h3><p>Data de emissão: ${new Date().toLocaleDateString('pt-BR')}</p></div>
     <p><strong>Nome:</strong> ${c.nome}<br><strong>Código:</strong> ${c.codigo||'-'}<br><strong>Cargo:</strong> ${c.cargo_nome||'-'}<br><strong>Setor:</strong> ${c.setor_nome||'-'}</p>
     <table><thead><tr><th>Treinamento</th><th>Data realização</th><th>Prazo (dias)</th><th>Data vencimento</th><th>Situação</th></tr></thead><tbody>
       ${regs.map(x=>`<tr><td>${x.treinamento_nome}</td><td>${x.data_realizacao_fmt}</td><td>${x.prazo_validade_dias==null?'-':x.prazo_validade_dias}</td><td>${x.data_vencimento_fmt||'-'}</td><td>${statusLabel(x.status)}</td></tr>`).join('')}
