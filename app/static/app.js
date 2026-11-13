@@ -12,7 +12,14 @@ async function api(path, opts={}) {
     ...opts,
     body: opts.body ? JSON.stringify(opts.body) : undefined
   });
-  if (r.status === 401) { localStorage.removeItem('eco_token'); state.user = null; render(); throw new Error('unauth'); }
+  if (r.status === 401) {
+    let msg = 'unauth';
+    try { const j = await r.clone().json(); if (j && j.error) msg = j.error; } catch(e) {}
+    localStorage.removeItem('eco_token'); state.user = null;
+    // don't auto-render on login page
+    if (state.user !== null || location.hash !== '') render();
+    throw new Error(msg);
+  }
   const ct = r.headers.get('content-type') || '';
   if (ct.includes('application/json')) {
     const j = await r.json();
