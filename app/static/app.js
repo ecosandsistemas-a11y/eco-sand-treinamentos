@@ -650,9 +650,15 @@ window.verHistorico = async (colabId, treinId) => {
 // ---------- Agenda ----------
 async function viewAgenda(c) {
   const rows = await api('/api/realizacoes');
+  const agendamentos = await api('/api/agendamentos');
+  const colaboradores = await api('/api/colaboradores');
+  const treinamentos = await api('/api/treinamentos');
   c.innerHTML = `
     <div class="card">
-      <h3>Agenda de vencimentos</h3>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="margin:0">Agenda de vencimentos</h3>
+        <button class="btn primary" id="btnNovoAgend">Agendar treinamento</button>
+      </div>
       <div class="filters">
         <div class="form-group"><label>Filtro rápido</label><select id="agFiltro">
           <option value="todos">Todos</option>
@@ -667,6 +673,10 @@ async function viewAgenda(c) {
         <button class="btn" id="agAplicar">Aplicar</button>
       </div>
       <div id="agTable"></div>
+    </div>
+    <div class="card" style="margin-top:12px;">
+      <h3>Compromissos agendados</h3>
+      <div id="agendTable"></div>
     </div>`;
   function renderTable(list) {
     $('#agTable').innerHTML = `<div class="table-wrap"><table><thead><tr><th>Colaborador</th><th>Setor</th><th>Treinamento</th><th>Realização</th><th>Vencimento</th><th>Dias</th><th>Situação</th></tr></thead><tbody>
@@ -674,7 +684,6 @@ async function viewAgenda(c) {
   }
   function apply() {
     const v = $('#agFiltro').value;
-    const hoje = new Date();
     let list = rows;
     if (v==='vencidos') list = rows.filter(r=>r.status==='vencido');
     else if (v==='hoje') list = rows.filter(r=>r.dias===0);
@@ -686,7 +695,57 @@ async function viewAgenda(c) {
   }
   $('#agAplicar').onclick = apply;
   renderTable(rows);
+
+  function renderAgend(list) {
+    $('#agendTable').innerHTML = `<div class="table-wrap"><table><thead><tr><th>Data</th><th>Colaborador</th><th>Treinamento</th><th>Status</th><th>Ações</th></tr></thead><tbody>
+      ${list.map(a=>`<tr>
+        <td>${a.data_agendada_fmt}</td><td>${a.colaborador_nome}</td><td>${a.treinamento_nome}</td>
+        <td>${a.status==='realizado'?'Realizado':(a.status==='cancelado'?'Cancelado':'Agendado')}</td>
+        <td>${a.status==='agendado' ? `<button class="btn small" onclick="marcarAgendRealizado(${a.id})">Marcar realizado</button> <button class="btn small" onclick="cancelarAgend(${a.id})">Cancelar</button>` : '-'}</td>
+      </tr>`).join('')}</tbody></table></div>`;
+  }
+  renderAgend(agendamentos);
+
+  $('#btnNovoAgend').onclick = () => {
+    modal(`<h3>Agendar treinamento</h3>
+      <div class="form-grid">
+        <div class="form-group"><label>Colaborador</label><select id="agColab">${colaboradores.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('')}</select></div>
+        <div class="form-group"><label>Treinamento</label><select id="agTrein">${treinamentos.filter(t=>t.ativo).map(t=>`<option value="${t.id}">${t.nome}</option>`).join('')}</select></div>
+        <div class="form-group"><label>Data agendada</label><input id="agData" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+        <div class="form-group"><label>Observações</label><input id="agObs"></div>
+      </div>
+      <div style="margin-top:12px;text-align:right;">
+        <button class="btn" onclick="closeModal()">Cancelar</button>
+        <button class="btn primary" id="btnSalvarAgend">Agendar</button>
+      </div>`);
+    $('#btnSalvarAgend').onclick = async () => {
+      try {
+        await api('/api/agendamentos', {method:'POST', body: {
+          colaborador_id: parseInt($('#agColab').value),
+          treinamento_id: parseInt($('#agTrein').value),
+          data_agendada: $('#agData').value,
+          observacoes: $('#agObs').value
+        }});
+        closeModal(); viewAgenda($('#content'));
+      } catch(e){ alert(e.message); }
+    };
+  };
 }
+
+window.marcarAgendRealizado = async (id) => {
+  if (!confirm('Marcar este treinamento como realizado? Será lançado no cadastro do colaborador.')) return;
+  try {
+    await api('/api/agendamentos/'+id+'/realizar', {method:'POST', body:{}});
+    viewAgenda($('#content'));
+  } catch(e){ alert(e.message); }
+};
+window.cancelarAgend = async (id) => {
+  if (!confirm('Cancelar este agendamento?')) return;
+  try {
+    await api('/api/agendamentos/'+id+'/cancelar', {method:'POST', body:{}});
+    viewAgenda($('#content'));
+  } catch(e){ alert(e.message); }
+};
 
 // ---------- Relatorios ----------
 async function viewRelatorios(c) {

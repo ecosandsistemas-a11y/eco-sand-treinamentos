@@ -602,6 +602,39 @@ class Handler(http.server.BaseHTTPRequestHandler):
             json_resp(self, 200, {'ok': True})
             return
 
+        # ---- agendamentos ----
+        if path == '/api/agendamentos':
+            if method == 'GET':
+                filtros = {}
+                if qs.get('status'): filtros['status'] = qs['status'][0]
+                if qs.get('colaborador_id'): filtros['colaborador_id'] = int(qs['colaborador_id'][0])
+                json_resp(self, 200, models.list_agendamentos(filtros))
+                return
+            if method == 'POST':
+                if not require_perm(self, u, 'realizacoes'): return
+                body = read_body(self)
+                sid, err = models.create_agendamento(body, u['id'])
+                if err: json_resp(self, 400, {'error': err}); return
+                json_resp(self, 201, {'id': sid})
+                return
+        if path.startswith('/api/agendamentos/') and path.endswith('/realizar'):
+            if method == 'POST':
+                if not require_perm(self, u, 'realizacoes'): return
+                aid = int(path.split('/')[-2])
+                body = read_body(self)
+                ok, err = models.marcar_agendamento_realizado(aid, body.get('data_realizacao'), u['id'])
+                if not ok: json_resp(self, 400, {'error': err}); return
+                json_resp(self, 200, {'ok': True})
+                return
+        if path.startswith('/api/agendamentos/') and path.endswith('/cancelar'):
+            if method == 'POST':
+                if not require_perm(self, u, 'realizacoes'): return
+                aid = int(path.split('/')[-2])
+                ok, err = models.cancelar_agendamento(aid, u['id'])
+                if not ok: json_resp(self, 400, {'error': err}); return
+                json_resp(self, 200, {'ok': True})
+                return
+
         # ---- import ----
         if path == '/api/import/preview' and method == 'POST':
             if not require_perm(self, u, 'import'): return

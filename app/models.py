@@ -636,6 +636,82 @@ def audit(user_id, tipo_operacao, entidade, registro_id, campo=None, valor_anter
     conn.commit()
     conn.close()
 
+# ---------- agendamentos ----------
+def create_agendamento(data, user_id=None):
+    conn = db.get_conn()
+    try:
+        conn.execute("""INSERT INTO agendamentos (colaborador_id,treinamento_id,data_agendada,status,observacoes,created_at,updated_at,created_by,updated_by)
+                        VALUES (?,?,?,?,?,?,?,?,?)""",
+                     (data['colaborador_id'], data['treinamento_id'], data['data_agendada'],
+                      'agendado', data.get('observacoes'), db.now_iso(), db.now_iso(), user_id, user_id))
+        conn.commit()
+        sid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+    except Exception as e:
+        conn.close(); return None, str(e)
+    conn.close()
+    return sid, None
+
+def list_agendamentos(filtros=None):
+    conn = db.get_conn()
+    q = """SELECT a.*, c.nome AS colaborador_nome, t.nome AS treinamento_nome, t.prazo_validade_dias AS prazo
+           FROM agendamentos a
+           JOIN colaboradores c ON c.id=a.colaborador_id
+           JOIN treinamentos t ON t.id=a.treinamento_id
+           WHERE 1=1"""
+    params=[]
+    if filtros:
+        if filtros.get('status'):
+            q += " AND a.status=?"; params.append(filtros['status'])
+        if filtros.get('colaborador_id'):
+            q += " AND a.colaborador_id=?"; params.append(filtros['colaborador_id'])
+    q += " ORDER BY a.data_agendada, c.nome"
+    rows = conn.execute(q, params).fetchall()
+    conn.close()
+    out=[]
+    for r in rows:
+        d = db.row_to_dict(r)
+        d['data_agendada_fmt'] = fmt_date(d['data_agendada'])
+        out.append(d)
+    return out
+
+def marcar_agendamento_realizado(id, data_realizacao=None, user_id=None):
+    conn = db.get_conn()
+    ag = conn.execute("SELECT * FROM agendamentos WHERE id=?", (id,)).fetchone()
+    if not ag:
+        conn.close(); return False, 'Não encontrado.'
+    if ag['status'] != 'agendado':
+        conn.close(); return False, 'Agendamento já finalizado.'
+    colab = conn.execute("SELECT * FROM colaboradores WHERE id=?", (ag['colaborador_id'],)).fetchone()
+    trein = conn.execute("SELECT * FROM treinamentos WHERE id=?", (ag['treinamento_id'],)).fetchone()
+    if not colab or not trein:
+        conn.close(); return False, 'Colaborador ou treinamento inválido.'
+    dr = data_realizacao or ag['data_agendada'] or db.now_iso()[:10]
+    prazo = trein['prazo_validade_dias']
+    venc = calc_vencimento(dr, prazo)
+    # create realizacao
+    conn.execute("""INSERT INTO realizacoes (colaborador_id,treinamento_id,data_realizacao,prazo_validade_dias,data_vencimento,created_at,updated_at,created_by,updated_by)
+                    VALUES (?,?,?,?,?,?,?,?,?)""",
+                 (ag['colaborador_id'], ag['treinamento_id'], dr, prazo, venc, db.now_iso(), db.now_iso(), user_id, user_id))
+    rid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+    conn.execute("UPDATE agendamentos SET status='realizado', realizacao_id=?, updated_at=?, updated_by=? WHERE id=?",
+                 (rid, db.now_iso(), user_id, id))
+    conn.commit()
+    conn.close()
+    audit(user_id, 'edicao', 'agendamento', id, 'status', 'agendado', 'realizado', None, 'manual')
+    return True, None
+
+def cancelar_agendamento(id, user_id=None):
+    conn = db.get_conn()
+    ag = conn.execute("SELECT * FROM agendamentos WHERE id=?", (id,)).fetchone()
+    if not ag:
+        conn.close(); return False, 'Não encontrado.'
+    if ag['status'] != 'agendado':
+        conn.close(); return False, 'Agendamento já finalizado.'
+    conn.execute("UPDATE agendamentos SET status='cancelado', updated_at=?, updated_by=? WHERE id=?", (db.now_iso(), user_id, id))
+    conn.commit()
+    conn.close()
+    return True, None
+
 def list_audit(filtros=None, limit=200):
     conn = db.get_conn()
     q = "SELECT * FROM auditoria WHERE 1=1"

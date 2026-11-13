@@ -147,6 +147,25 @@ CREATE INDEX IF NOT EXISTS idx_realizacoes_trein ON realizacoes(treinamento_id);
 CREATE INDEX IF NOT EXISTS idx_realizacoes_venc ON realizacoes(data_vencimento);
 CREATE INDEX IF NOT EXISTS idx_colab_setor ON colaboradores(setor_id);
 CREATE INDEX IF NOT EXISTS idx_colab_cargo ON colaboradores(cargo_id);
+
+CREATE TABLE IF NOT EXISTS agendamentos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  colaborador_id INTEGER NOT NULL,
+  treinamento_id INTEGER NOT NULL,
+  data_agendada TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'agendado',
+  observacoes TEXT,
+  realizacao_id INTEGER,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  created_by INTEGER,
+  updated_by INTEGER,
+  FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id),
+  FOREIGN KEY (treinamento_id) REFERENCES treinamentos(id),
+  FOREIGN KEY (realizacao_id) REFERENCES realizacoes(id)
+);
+CREATE INDEX IF NOT EXISTS idx_agend_colab ON agendamentos(colaborador_id);
+CREATE INDEX IF NOT EXISTS idx_agend_status ON agendamentos(status);
 '''
 
 def init_db():
