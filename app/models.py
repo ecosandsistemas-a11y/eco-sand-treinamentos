@@ -126,6 +126,9 @@ def update_setor(id, nome, descricao=None, ativo=None, user_id=None):
         sets.append('descricao=?'); params.append(descricao)
     if ativo is not None:
         sets.append('ativo=?'); params.append(1 if ativo else 0)
+    if 'situacao' in data and data.get('situacao') is not None:
+        # sync ativo flag
+        sets.append('ativo=?'); params.append(1 if data['situacao']=='ativo' else 0)
     sets.append('updated_at=?'); params.append(db.now_iso())
     params.append(id)
     try:
@@ -175,6 +178,9 @@ def update_cargo(id, nome, descricao=None, ativo=None, user_id=None):
     if nome is not None: sets.append('nome=?'); params.append(nome.strip())
     if descricao is not None: sets.append('descricao=?'); params.append(descricao)
     if ativo is not None: sets.append('ativo=?'); params.append(1 if ativo else 0)
+    if 'situacao' in data and data.get('situacao') is not None:
+        # sync ativo flag
+        sets.append('ativo=?'); params.append(1 if data['situacao']=='ativo' else 0)
     sets.append('updated_at=?'); params.append(db.now_iso())
     params.append(id)
     try:
@@ -227,6 +233,9 @@ def update_treinamento(id, data, user_id=None):
         if f in data and data[f] is not None:
             sets.append(f+'=?')
             params.append(data[f])
+    if 'situacao' in data and data.get('situacao') is not None:
+        # sync ativo flag
+        sets.append('ativo=?'); params.append(1 if data['situacao']=='ativo' else 0)
     sets.append('updated_at=?'); params.append(db.now_iso())
     params.append(id)
     conn.execute(f"UPDATE treinamentos SET {','.join(sets)} WHERE id=?", params)
@@ -246,7 +255,12 @@ def list_colaboradores(filtros=None):
     params=[]
     if filtros:
         if filtros.get('ativo') is not None:
-            q += " AND c.ativo=?"; params.append(1 if filtros['ativo'] else 0)
+            if filtros['ativo']:
+                q += " AND c.situacao='ativo'"
+            else:
+                q += " AND c.situacao!='ativo'"
+        if filtros.get('situacao'):
+            q += " AND c.situacao=?"; params.append(filtros['situacao'])
         if filtros.get('setor_id'):
             q += " AND c.setor_id=?"; params.append(filtros['setor_id'])
         if filtros.get('cargo_id'):
@@ -271,10 +285,11 @@ def get_colaborador(id):
 def create_colaborador(data, user_id=None):
     conn = db.get_conn()
     try:
-        conn.execute("""INSERT INTO colaboradores (codigo,nome,setor_id,cargo_id,matricula,data_admissao,ativo,observacoes,created_at,updated_at,created_by,updated_by)
-                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+        conn.execute("""INSERT INTO colaboradores (codigo,nome,setor_id,cargo_id,matricula,data_admissao,ativo,situacao,observacoes,created_at,updated_at,created_by,updated_by)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                      (data.get('codigo'), data['nome'].strip(), data.get('setor_id'), data.get('cargo_id'),
-                      data.get('matricula'), data.get('data_admissao'), 1 if data.get('ativo',1) else 0,
+                      data.get('matricula'), data.get('data_admissao'), 1 if (data.get('situacao', data.get('ativo',1) and 'ativo' or 'inativo')=='ativo') else 0,
+                      data.get('situacao', 'ativo' if data.get('ativo',1) else 'inativo'),
                       data.get('observacoes'), db.now_iso(), db.now_iso(), user_id, user_id))
         conn.commit()
         sid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
@@ -288,7 +303,7 @@ def update_colaborador(id, data, user_id=None):
     conn = db.get_conn()
     old = conn.execute("SELECT * FROM colaboradores WHERE id=?", (id,)).fetchone()
     if not old: conn.close(); return False,'Não encontrado.'
-    fields = ['codigo','nome','setor_id','cargo_id','matricula','data_admissao','ativo','observacoes']
+    fields = ['codigo','nome','setor_id','cargo_id','matricula','data_admissao','ativo','situacao','observacoes']
     sets=[]; params=[]
     for f in fields:
         if f in data:
@@ -297,6 +312,9 @@ def update_colaborador(id, data, user_id=None):
             if f=='ativo' and v is not None: v = 1 if v else 0
             if f=='nome' and v is not None: v = v.strip()
             params.append(v)
+    if 'situacao' in data and data.get('situacao') is not None:
+        # sync ativo flag
+        sets.append('ativo=?'); params.append(1 if data['situacao']=='ativo' else 0)
     sets.append('updated_at=?'); params.append(db.now_iso())
     sets.append('updated_by=?'); params.append(user_id)
     params.append(id)
@@ -371,6 +389,9 @@ def update_realizacao(id, data, user_id=None, username=None, motivo=None):
         sets.append('observacoes=?'); params.append(data['observacoes'])
     if 'anexo_ref' in data:
         sets.append('anexo_ref=?'); params.append(data['anexo_ref'])
+    if 'situacao' in data and data.get('situacao') is not None:
+        # sync ativo flag
+        sets.append('ativo=?'); params.append(1 if data['situacao']=='ativo' else 0)
     sets.append('updated_at=?'); params.append(db.now_iso())
     sets.append('updated_by=?'); params.append(user_id)
     params.append(id)
@@ -413,7 +434,7 @@ def get_realizacao(id):
 
 def list_realizacoes(filtros=None):
     conn = db.get_conn()
-    q = """SELECT r.*, c.nome AS colaborador_nome, c.ativo AS colaborador_ativo,
+    q = """SELECT r.*, c.nome AS colaborador_nome, c.ativo AS colaborador_ativo, c.situacao AS colaborador_situacao,
                   t.nome AS treinamento_nome, t.ativo AS treinamento_ativo,
                   s.nome AS setor_nome, g.nome AS cargo_nome
            FROM realizacoes r
@@ -438,6 +459,8 @@ def list_realizacoes(filtros=None):
             q += " AND substr(r.data_vencimento,6,2)=?"; params.append(str(filtros['mes']).zfill(2))
         if filtros.get('colab_ativo') is not None:
             q += " AND c.ativo=?"; params.append(1 if filtros['colab_ativo'] else 0)
+        if filtros.get('excluir_afastados'):
+            q += " AND c.situacao!='afastado'" 
         if filtros.get('busca'):
             b='%'+filtros['busca'].lower()+'%'
             q += " AND (LOWER(c.nome) LIKE ? OR LOWER(t.nome) LIKE ?)"; params += [b,b]

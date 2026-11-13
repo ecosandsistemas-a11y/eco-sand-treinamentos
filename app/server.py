@@ -254,6 +254,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 if qs.get('setor_id'): filtros['setor_id'] = int(qs['setor_id'][0])
                 if qs.get('cargo_id'): filtros['cargo_id'] = int(qs['cargo_id'][0])
                 if qs.get('ativo'): filtros['ativo'] = (qs['ativo'][0] == '1')
+                if qs.get('situacao'): filtros['situacao'] = qs['situacao'][0]
                 json_resp(self, 200, models.list_colaboradores(filtros))
                 return
             if method == 'POST':
@@ -351,7 +352,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         # ---- pendencias ----
         if path == '/api/pendencias':
             if method == 'GET':
-                regs = models.list_realizacoes({})
+                regs = models.list_realizacoes({'excluir_afastados': True})
                 # filter to vencido/proximo/incompleto
                 items = [r for r in regs if r['status'] in ('vencido','proximo','dados_incompletos')]
                 # attach acomp
@@ -371,7 +372,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if path == '/api/relatorio/mensal':
             if method == 'GET':
                 ano = qs['ano'][0]; mes = qs['mes'][0].zfill(2)
-                regs = models.list_realizacoes({'ano': ano})
+                regs = models.list_realizacoes({'ano': ano, 'excluir_afastados': True})
                 # filter vencimento in that month
                 regs = [r for r in regs if r['data_vencimento'] and r['data_vencimento'][5:7]==mes and r['data_vencimento'][:4]==str(ano)]
                 # group by day
@@ -389,7 +390,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if path == '/api/relatorio/anual':
             if method == 'GET':
                 # vencimentos por ano
-                regs = models.list_realizacoes({})
+                regs = models.list_realizacoes({'excluir_afastados': True})
                 por_ano = {}
                 for r in regs:
                     if r['data_vencimento']:
@@ -413,6 +414,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 filtros = {}
                 for k in ['ano','mes','setor_id','cargo_id','treinamento_id','colaborador_id','status']:
                     if qs.get(k): filtros[k] = qs[k][0]
+                filtros['excluir_afastados'] = True
                 regs = models.list_realizacoes(filtros)
                 for r in regs:
                     ws.append([r['colaborador_nome'], r.get('cargo_nome'), r.get('setor_nome'), r['treinamento_nome'],
@@ -440,6 +442,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 filtros = {}
                 for k in ['ano','mes','setor_id','cargo_id','treinamento_id','colaborador_id','status']:
                     if qs.get(k): filtros[k] = qs[k][0]
+                filtros['excluir_afastados'] = True
                 regs = models.list_realizacoes(filtros)
                 buf = io.StringIO()
                 w = csv.writer(buf)

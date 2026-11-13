@@ -75,6 +75,7 @@ CREATE TABLE IF NOT EXISTS colaboradores (
   matricula TEXT,
   data_admissao TEXT,
   ativo INTEGER NOT NULL DEFAULT 1,
+  situacao TEXT NOT NULL DEFAULT 'ativo',
   observacoes TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
@@ -149,6 +150,12 @@ def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = get_conn()
     conn.executescript(SCHEMA)
+    # migration: add situacao column to colaboradores
+    cols = [r[1] for r in conn.execute("PRAGMA table_info(colaboradores)").fetchall()]
+    if 'situacao' not in cols:
+        conn.execute("ALTER TABLE colaboradores ADD COLUMN situacao TEXT NOT NULL DEFAULT 'ativo'")
+    conn.execute("UPDATE colaboradores SET situacao='inativo' WHERE ativo=0 AND situacao='ativo'")
+    conn.execute("UPDATE colaboradores SET situacao='ativo' WHERE ativo=1 AND situacao NOT IN ('ativo','inativo','afastado')")
     cur = conn.execute("SELECT valor FROM configuracoes WHERE chave='janela_alerta_dias'")
     if cur.fetchone() is None:
         conn.execute("INSERT INTO configuracoes (chave,valor,updated_at) VALUES (?,?,?)",

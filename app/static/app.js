@@ -28,6 +28,7 @@ function el(html){ const d=document.createElement('div'); d.innerHTML=html; retu
 
 function badge(status){ return `<span class="badge ${status}">${statusLabel(status)}</span>`; }
 function badgeAtivo(v){ return `<span class="badge ${v?'ativo':'inativo'}">${v?'Ativo':'Inativo'}</span>`; }
+function badgeSituacao(v){ const m = v==='afastado'?'afastado':(v==='inativo'?'inativo':'ativo'); const lbl = v==='afastado'?'Afastado':(v==='inativo'?'Inativo':'Ativo'); return `<span class="badge ${m}">${lbl}</span>`; }
 function statusLabel(s){
   return {em_dia:'Treinamento em dia', proximo:'Próximo do vencimento', vencido:'Treinamento Vencido', dados_incompletos:'Dados incompletos'}[s] || s;
 }
@@ -409,7 +410,7 @@ async function viewColaboradores(c) {
         <div class="form-group"><label>Busca</label><input id="cb" placeholder="nome ou código"></div>
         <div class="form-group"><label>Setor</label><select id="cs"><option value="">Todos</option>${setores.map(s=>`<option value="${s.id}">${s.nome}</option>`).join('')}</select></div>
         <div class="form-group"><label>Cargo</label><select id="cc"><option value="">Todos</option>${cargos.map(s=>`<option value="${s.id}">${s.nome}</option>`).join('')}</select></div>
-        <div class="form-group"><label>Situação</label><select id="ca"><option value="">Todas</option><option value="1">Ativo</option><option value="0">Inativo</option></select></div>
+        <div class="form-group"><label>Situação</label><select id="ca"><option value="">Todas</option><option value="ativo">Ativo</option><option value="inativo">Inativo</option><option value="afastado">Afastado</option></select></div>
         <button class="btn" id="btnFiltrarColab">Filtrar</button>
       </div>
       <div id="colabTable"></div>
@@ -419,11 +420,11 @@ async function viewColaboradores(c) {
     if ($('#cb').value) qs.set('busca', $('#cb').value);
     if ($('#cs').value) qs.set('setor_id', $('#cs').value);
     if ($('#cc').value) qs.set('cargo_id', $('#cc').value);
-    if ($('#ca').value) qs.set('ativo', $('#ca').value);
+    if ($('#ca').value) qs.set('situacao', $('#ca').value);
     const rows = await api('/api/colaboradores?'+qs.toString());
     $('#colabTable').innerHTML = `<div class="table-wrap"><table><thead><tr><th>Nome</th><th>Código</th><th>Setor</th><th>Cargo</th><th>Situação</th><th>Ações</th></tr></thead><tbody>
       ${rows.map(r=>`<tr>
-        <td>${r.nome}</td><td>${r.codigo||''}</td><td>${r.setor_nome||''}</td><td>${r.cargo_nome||''}</td><td>${badgeAtivo(r.ativo)}</td>
+        <td>${r.nome}</td><td>${r.codigo||''}</td><td>${r.setor_nome||''}</td><td>${r.cargo_nome||''}</td><td>${badgeSituacao(r.situacao|| (r.ativo?'ativo':'inativo'))}</td>
         <td>
           <button class="btn small" onclick="abrirFicha(${r.id})">Ficha</button>
           <button class="btn small" onclick="editarColab(${r.id})">Editar</button>
@@ -446,7 +447,7 @@ async function modalFormColab(id=null, data={}) {
       <div class="form-group"><label>Matrícula</label><input id="clMat" value="${esc(data.matricula||'')}"></div>
       <div class="form-group"><label>Data admissão</label><input id="clAdm" value="${data.data_admissao||''}" placeholder="AAAA-MM-DD"></div>
       <div class="form-group"><label>Observações</label><input id="clObs" value="${esc(data.observacoes||'')}"></div>
-      <div class="form-group"><label>Situação</label><select id="clAtivo"><option value="1" ${data.ativo!==0?'selected':''}>Ativo</option><option value="0" ${data.ativo===0?'selected':''}>Inativo</option></select></div>
+      <div class="form-group"><label>Situação</label><select id="clSituacao"><option value="ativo" ${(data.situacao|| (data.ativo!==0?'ativo':'inativo'))==='ativo'?'selected':''}>Ativo</option><option value="inativo" ${(data.situacao|| (data.ativo!==0?'ativo':'inativo'))==='inativo'?'selected':''}>Inativo</option><option value="afastado" ${(data.situacao)==='afastado'?'selected':''}>Afastado</option></select></div>
     </div>
     <div style="margin-top:12px;text-align:right;">
       <button class="btn" onclick="closeModal()">Cancelar</button>
@@ -459,7 +460,7 @@ async function modalFormColab(id=null, data={}) {
         setor_id: $('#clSetor').value? parseInt($('#clSetor').value): null,
         cargo_id: $('#clCargo').value? parseInt($('#clCargo').value): null,
         matricula: $('#clMat').value, data_admissao: $('#clAdm').value || null,
-        observacoes: $('#clObs').value, ativo: $('#clAtivo').value==='1'
+        observacoes: $('#clObs').value, situacao: $('#clSituacao').value, ativo: $('#clSituacao').value==='ativo'
       };
       if (id) await api('/api/colaboradores/'+id, {method:'PUT', body});
       else await api('/api/colaboradores', {method:'POST', body});
@@ -482,7 +483,7 @@ async function abrirFicha(id) {
   const venc = regs.filter(x=>x.status==='vencido').length;
   const inc = regs.filter(x=>x.status==='dados_incompletos').length;
   modal(`<h3>Ficha do colaborador</h3>
-    <p><strong>${c.nome}</strong><br>Código: ${c.codigo||'-'} | Cargo: ${c.cargo_nome||'-'} | Setor: ${c.setor_nome||'-'} | Situação: ${badgeAtivo(c.ativo)}</p>
+    <p><strong>${c.nome}</strong><br>Código: ${c.codigo||'-'} | Cargo: ${c.cargo_nome||'-'} | Setor: ${c.setor_nome||'-'} | Situação: ${badgeSituacao(c.situacao|| (c.ativo?'ativo':'inativo'))}</p>
     <div class="grid cols-4">
       <div class="kpi"><div class="label">Total</div><div class="value">${total}</div></div>
       <div class="kpi success"><div class="label">Em dia</div><div class="value">${emdia}</div></div>
