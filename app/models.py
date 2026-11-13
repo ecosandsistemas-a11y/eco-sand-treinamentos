@@ -296,7 +296,7 @@ def update_colaborador(id, data, user_id=None):
     conn = db.get_conn()
     old = conn.execute("SELECT * FROM colaboradores WHERE id=?", (id,)).fetchone()
     if not old: conn.close(); return False,'Não encontrado.'
-    fields = ['codigo','nome','setor_id','cargo_id','matricula','data_admissao','ativo','situacao','observacoes']
+    fields = ['codigo','nome','setor_id','cargo_id','matricula','data_admissao','ativo','situacao','observacoes','foto']
     sets=[]; params=[]
     for f in fields:
         if f in data:

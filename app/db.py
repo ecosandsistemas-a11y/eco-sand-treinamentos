@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS colaboradores (
   ativo INTEGER NOT NULL DEFAULT 1,
   situacao TEXT NOT NULL DEFAULT 'ativo',
   observacoes TEXT,
+  foto TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   created_by INTEGER,
@@ -176,6 +177,8 @@ def init_db():
     cols = [r[1] for r in conn.execute("PRAGMA table_info(colaboradores)").fetchall()]
     if 'situacao' not in cols:
         conn.execute("ALTER TABLE colaboradores ADD COLUMN situacao TEXT NOT NULL DEFAULT 'ativo'")
+    if 'foto' not in cols:
+        conn.execute("ALTER TABLE colaboradores ADD COLUMN foto TEXT")
     conn.execute("UPDATE colaboradores SET situacao='inativo' WHERE ativo=0 AND situacao='ativo'")
     conn.execute("UPDATE colaboradores SET situacao='ativo' WHERE ativo=1 AND situacao NOT IN ('ativo','inativo','afastado')")
     cur = conn.execute("SELECT valor FROM configuracoes WHERE chave='janela_alerta_dias'")

@@ -496,7 +496,19 @@ async function abrirFicha(id) {
   const venc = regs.filter(x=>x.status==='vencido').length;
   const inc = regs.filter(x=>x.status==='dados_incompletos').length;
   modal(`<h3>Ficha do colaborador</h3>
-    <p><strong>${c.nome}</strong><br>Código: ${c.codigo||'-'} | Cargo: ${c.cargo_nome||'-'} | Setor: ${c.setor_nome||'-'} | Situação: ${badgeSituacao(c.situacao|| (c.ativo?'ativo':'inativo'))}</p>
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
+      <div id="fotoBox" style="width:96px;height:96px;border-radius:8px;border:1px solid #ccc;overflow:hidden;background:#f3f4f6;display:flex;align-items:center;justify-content:center;">
+        ${c.foto ? `<img src="${c.foto}" style="width:100%;height:100%;object-fit:cover;">` : '<span style="color:#9ca3af;font-size:12px;">Sem foto</span>'}
+      </div>
+      <div>
+        <p style="margin:0;"><strong>${c.nome}</strong><br>Código: ${c.codigo||'-'} | Cargo: ${c.cargo_nome||'-'} | Setor: ${c.setor_nome||'-'} | Situação: ${badgeSituacao(c.situacao|| (c.ativo?'ativo':'inativo'))}</p>
+        <div style="margin-top:6px;">
+          <input type="file" id="fotoInput" accept="image/*" style="display:none;">
+          <button class="btn small" id="btnFoto">Adicionar/Alterar foto</button>
+          ${c.foto ? '<button class="btn small" id="btnRemFoto">Remover foto</button>' : ''}
+        </div>
+      </div>
+    </div>
     <div class="grid cols-4">
       <div class="kpi"><div class="label">Total</div><div class="value">${total}</div></div>
       <div class="kpi success"><div class="label">Em dia</div><div class="value">${emdia}</div></div>
@@ -525,6 +537,30 @@ async function abrirFicha(id) {
       <button class="btn" onclick="registrarRealizacao(${c.id})">Registrar treinamento</button>
       <button class="btn primary" onclick="closeModal()">Fechar</button>
     </div>`);
+
+  const fotoInput = $('#fotoInput');
+  const btnFoto = $('#btnFoto');
+  if (btnFoto) btnFoto.onclick = () => fotoInput.click();
+  if (fotoInput) fotoInput.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        await api('/api/colaboradores/'+c.id, {method:'PUT', body: {foto: reader.result}});
+        abrirFicha(c.id);
+      } catch(err){ alert(err.message); }
+    };
+    reader.readAsDataURL(file);
+  };
+  const btnRem = $('#btnRemFoto');
+  if (btnRem) btnRem.onclick = async () => {
+    if (!confirm('Remover foto?')) return;
+    try {
+      await api('/api/colaboradores/'+c.id, {method:'PUT', body: {foto: null}});
+      abrirFicha(c.id);
+    } catch(err){ alert(err.message); }
+  };
 }
 
 // ---------- Realizacoes ----------
