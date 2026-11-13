@@ -275,7 +275,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if method == 'GET':
                 c = models.get_colaborador(cid)
                 regs = models.realizacoes_por_colaborador(cid)
-                json_resp(self, 200, {'colaborador': c, 'realizacoes': regs})
+                ags = [a for a in models.list_agendamentos({'colaborador_id': cid}) if a['status']=='agendado']
+                json_resp(self, 200, {'colaborador': c, 'realizacoes': regs, 'agendamentos': ags})
                 return
         if path.startswith('/api/colaboradores/'):
             cid = int(path.split('/')[-1])

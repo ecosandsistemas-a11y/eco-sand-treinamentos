@@ -37,7 +37,7 @@ function badge(status){ return `<span class="badge ${status}">${statusLabel(stat
 function badgeAtivo(v){ return `<span class="badge ${v?'ativo':'inativo'}">${v?'Ativo':'Inativo'}</span>`; }
 function badgeSituacao(v){ const m = v==='afastado'?'afastado':(v==='inativo'?'inativo':'ativo'); const lbl = v==='afastado'?'Afastado':(v==='inativo'?'Inativo':'Ativo'); return `<span class="badge ${m}">${lbl}</span>`; }
 function statusLabel(s){
-  return {em_dia:'Treinamento em dia', proximo:'Próximo do vencimento', vencido:'Treinamento Vencido', dados_incompletos:'Dados incompletos'}[s] || s;
+  return {em_dia:'Treinamento em dia', proximo:'Próximo do vencimento', vencido:'Treinamento Vencido', dados_incompletos:'Dados incompletos', agendado:'Agendado'}[s] || s;
 }
 
 function applyTheme() {
@@ -489,6 +489,7 @@ async function abrirFicha(id) {
   const r = await api('/api/colaboradores/'+id+'/ficha');
   const c = r.colaborador;
   const regs = r.realizacoes;
+  const ags = r.agendamentos || [];
   const total = regs.length;
   const emdia = regs.filter(x=>x.status==='em_dia').length;
   const prox = regs.filter(x=>x.status==='proximo').length;
@@ -514,6 +515,12 @@ async function abrirFicha(id) {
       </tr>`).join('')}
       </tbody></table>
     </div>
+    ${ags.length ? `<h4 style="margin-top:12px;">Compromissos agendados</h4>
+    <div class="table-wrap"><table><thead><tr><th>Data</th><th>Treinamento</th><th>Status</th><th>Ações</th></tr></thead><tbody>
+      ${ags.map(a=>`<tr>
+        <td>${a.data_agendada_fmt}</td><td>${a.treinamento_nome}</td><td>${badge('agendado')}</td>
+        <td><button class="btn small" onclick="marcarAgendRealizadoFicha(${a.id},${c.id})">Marcar realizado</button> <button class="btn small" onclick="cancelarAgendFicha(${a.id},${c.id})">Cancelar</button></td>
+      </tr>`).join('')}</tbody></table></div>` : ''}
     <div style="margin-top:12px;text-align:right;">
       <button class="btn" onclick="registrarRealizacao(${c.id})">Registrar treinamento</button>
       <button class="btn primary" onclick="closeModal()">Fechar</button>
@@ -1144,4 +1151,20 @@ window.editarUser = async (id, username, nome, role, ativo, colaborador_id) => {
       closeModal(); viewUsuarios($('#content'));
     } catch(e){ alert(e.message); }
   };
+};
+
+
+window.marcarAgendRealizadoFicha = async (id, colabId) => {
+  if (!confirm('Marcar este treinamento como realizado? Será lançado no cadastro do colaborador.')) return;
+  try {
+    await api('/api/agendamentos/'+id+'/realizar', {method:'POST', body:{}});
+    abrirFicha(colabId);
+  } catch(e){ alert(e.message); }
+};
+window.cancelarAgendFicha = async (id, colabId) => {
+  if (!confirm('Cancelar este agendamento?')) return;
+  try {
+    await api('/api/agendamentos/'+id+'/cancelar', {method:'POST', body:{}});
+    abrirFicha(colabId);
+  } catch(e){ alert(e.message); }
 };

@@ -71,6 +71,7 @@ tr:hover td { background: var(--table-hover); }
 .badge.proximo { background: #fef3c7; color: var(--warning); }
 .badge.vencido { background: #fee2e2; color: var(--danger); }
 .badge.dados_incompletos { background: #e5e7eb; color: var(--neutral); }
+.badge.agendado { background: #dbeafe; color: #1d4ed8; }
 .badge.ativo { background: #dcfce7; color: #16a34a; }
 .badge.inativo { background: #fee2e2; color: #dc2626; }
 .badge.afastado { background: #fef3c7; color: #b45309; }
