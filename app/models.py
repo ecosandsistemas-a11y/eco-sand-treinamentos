@@ -280,6 +280,7 @@ def create_colaborador(data, user_id=None):
         conn.execute("""INSERT INTO colaboradores (codigo,nome,setor_id,cargo_id,matricula,data_admissao,ativo,situacao,observacoes,created_at,updated_at,created_by,updated_by)
                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                      (data.get('codigo'), data['nome'].strip(), data.get('setor_id'), data.get('cargo_id'),
+                      (data.get('codigo') or None), data['nome'].strip(), data.get('setor_id'), data.get('cargo_id'),
                       data.get('matricula'), data.get('data_admissao'), 1 if (data.get('situacao', data.get('ativo',1) and 'ativo' or 'inativo')=='ativo') else 0,
                       data.get('situacao', 'ativo' if data.get('ativo',1) else 'inativo'),
                       data.get('observacoes'), db.now_iso(), db.now_iso(), user_id, user_id))
@@ -303,6 +304,7 @@ def update_colaborador(id, data, user_id=None):
             v = data[f]
             if f=='ativo' and v is not None: v = 1 if v else 0
             if f=='nome' and v is not None: v = v.strip()
+            if f=='codigo' and v is not None: v = v.strip() or None
             params.append(v)
     if 'situacao' in data and data.get('situacao') is not None:
         # sync ativo flag
@@ -314,7 +316,10 @@ def update_colaborador(id, data, user_id=None):
         conn.execute(f"UPDATE colaboradores SET {','.join(sets)} WHERE id=?", params)
         conn.commit()
     except sqlite3.IntegrityError as e:
-        conn.close(); return False,'Erro: '+str(e)
+        conn.close()
+        if 'codigo' in str(e).lower() or 'unique' in str(e).lower():
+            return False,'Código já existente. Escolha outro código.'
+        return False,'Erro: '+str(e)
     conn.close()
     audit(user_id,'edicao','colaborador',id,'nome',old['nome'],data.get('nome',old['nome']),None,'manual')
     return True,None
