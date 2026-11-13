@@ -672,7 +672,8 @@ async function viewAgenda(c) {
       ${list.map(a=>`<tr>
         <td>${a.data_agendada_fmt}</td><td>${a.colaborador_nome}</td><td>${a.treinamento_nome}</td>
         <td>${a.status==='realizado'?'Realizado':(a.status==='cancelado'?'Cancelado':'Agendado')}</td>
-        <td>${a.status==='agendado' ? `<button class="btn small" onclick="editarAgendData(${a.id},'${a.data_agendada}')">Editar data</button> <button class="btn small" onclick="marcarAgendRealizado(${a.id})">Marcar realizado</button> <button class="btn small" onclick="excluirAgend(${a.id})">Excluir</button>` : '-'}</td>
+        <td>${a.status==='agendado' ? `<button class="btn small" onclick="editarAgendData(${a.id},'${a.data_agendada}')">Editar data</button> <button class="btn small" onclick="marcarAgendRealizado(${a.id})">Marcar realizado</button> <button class="btn small" onclick="excluirAgend(${a.id},false)">Excluir</button>` :
+            (a.status==='realizado' ? `<button class="btn small" onclick="excluirAgend(${a.id},true)">Excluir</button>` : '-')}</td>
       </tr>`).join('')}</tbody></table></div>`;
   }
   renderAgend(agendamentos);
@@ -733,10 +734,18 @@ window.editarAgendData = (id, current) => {
   };
 };
 
-window.excluirAgend = async (id) => {
-  if (!confirm('Excluir este compromisso agendado?')) return;
+window.excluirAgend = async (id, realizado) => {
+  let motivo = '';
+  if (realizado) {
+    motivo = prompt('Justificativa para excluir compromisso realizado:');
+    if (motivo === null) return;
+    motivo = motivo.trim();
+    if (!motivo) { alert('Justificativa obrigatória.'); return; }
+  } else {
+    if (!confirm('Excluir este compromisso agendado?')) return;
+  }
   try {
-    await api('/api/agendamentos/'+id, {method:'DELETE'});
+    await api('/api/agendamentos/'+id, {method:'DELETE', body: {motivo}});
     viewAgenda($('#content'));
   } catch(e){ alert(e.message); }
 };

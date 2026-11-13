@@ -647,6 +647,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
         if path.startswith('/api/agendamentos/') and method == 'DELETE':
             aid = int(path.split('/')[-1])
+            body = read_body(self)
+            motivo = (body.get('motivo') or '').strip()
             conn = db.get_conn()
             ag = conn.execute("SELECT * FROM agendamentos WHERE id=?", (aid,)).fetchone()
             if not ag:
@@ -658,8 +660,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
             else:
                 if not auth.has_perm(u, 'delete'):
                     conn.close(); json_resp(self, 403, {'error': 'Sem permissão'}); return
-            # re-fetch not needed
-
+                # realized/cancelado: require justification
+                if not motivo:
+                    conn.close(); json_resp(self, 400, {'error': 'Justificativa obrigatória para excluir compromisso realizado.'}); return
             if ag['realizacao_id']:
                 conn.execute("DELETE FROM pendencias_acomp WHERE realizacao_id=?", (ag['realizacao_id'],))
                 conn.execute("DELETE FROM agendamentos WHERE id=?", (aid,))
@@ -668,6 +671,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 conn.execute("DELETE FROM agendamentos WHERE id=?", (aid,))
             conn.commit()
             conn.close()
+            # audit
+            try:
+                models.audit(u['id'], 'exclusao', 'agendamento', aid, 'status', ag['status'], 'excluido', motivo, 'manual')
+            except Exception:
+                pass
             json_resp(self, 200, {'ok': True})
             return
 
