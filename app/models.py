@@ -127,9 +127,6 @@ def update_setor(id, nome, descricao=None, ativo=None, user_id=None):
         sets.append('descricao=?'); params.append(descricao)
     if ativo is not None:
         sets.append('ativo=?'); params.append(1 if ativo else 0)
-    if 'situacao' in data and data.get('situacao') is not None:
-        # sync ativo flag
-        sets.append('ativo=?'); params.append(1 if data['situacao']=='ativo' else 0)
     sets.append('updated_at=?'); params.append(db.now_iso())
     params.append(id)
     try:
@@ -179,9 +176,6 @@ def update_cargo(id, nome, descricao=None, ativo=None, user_id=None):
     if nome is not None: sets.append('nome=?'); params.append(nome.strip())
     if descricao is not None: sets.append('descricao=?'); params.append(descricao)
     if ativo is not None: sets.append('ativo=?'); params.append(1 if ativo else 0)
-    if 'situacao' in data and data.get('situacao') is not None:
-        # sync ativo flag
-        sets.append('ativo=?'); params.append(1 if data['situacao']=='ativo' else 0)
     sets.append('updated_at=?'); params.append(db.now_iso())
     params.append(id)
     try:
@@ -234,9 +228,6 @@ def update_treinamento(id, data, user_id=None):
         if f in data and data[f] is not None:
             sets.append(f+'=?')
             params.append(data[f])
-    if 'situacao' in data and data.get('situacao') is not None:
-        # sync ativo flag
-        sets.append('ativo=?'); params.append(1 if data['situacao']=='ativo' else 0)
     sets.append('updated_at=?'); params.append(db.now_iso())
     params.append(id)
     conn.execute(f"UPDATE treinamentos SET {','.join(sets)} WHERE id=?", params)
@@ -390,9 +381,6 @@ def update_realizacao(id, data, user_id=None, username=None, motivo=None):
         sets.append('observacoes=?'); params.append(data['observacoes'])
     if 'anexo_ref' in data:
         sets.append('anexo_ref=?'); params.append(data['anexo_ref'])
-    if 'situacao' in data and data.get('situacao') is not None:
-        # sync ativo flag
-        sets.append('ativo=?'); params.append(1 if data['situacao']=='ativo' else 0)
     sets.append('updated_at=?'); params.append(db.now_iso())
     sets.append('updated_by=?'); params.append(user_id)
     params.append(id)
