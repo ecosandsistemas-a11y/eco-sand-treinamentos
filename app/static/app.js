@@ -923,7 +923,7 @@ async function viewUsuarios(c) {
       <div class="form-grid">
         <div class="form-group"><label>Usuário</label><input id="uUser"></div>
         <div class="form-group"><label>Nome</label><input id="uNome"></div>
-        <div class="form-group"><label>Perfil</label><select id="uRole"><option value="admin">Admin</option><option value="rh">RH</option><option value="consulta">Consulta</option></select></div>
+        <div class="form-group"><label>Perfil</label><select id="uRole"><option value="admin">Admin</option><option value="tecnico_seguranca">Técnico de Segurança</option><option value="consulta">Consulta</option></select></div>
         <div class="form-group"><label>Senha</label><input id="uPass" value="mudar123"></div>
       </div>
       <div style="margin-top:12px;text-align:right;">
@@ -978,7 +978,7 @@ window.editarUser = async (id, username, nome, role, ativo) => {
       <div class="form-group"><label>Nome</label><input id="eUNome" value="${esc(nome)}"></div>
       <div class="form-group"><label>Perfil (permissões)</label><select id="eURole">
         <option value="admin" ${role==='admin'?'selected':''}>Admin (tudo)</option>
-        <option value="rh" ${role==='rh'?'selected':''}>RH (cadastros, realizações, relatórios, export, pendências)</option>
+        <option value="tecnico_seguranca" ${role==='tecnico_seguranca'?'selected':''}>Técnico de Segurança (cadastros, realizações, relatórios, export, pendências)</option>
         <option value="consulta" ${role==='consulta'?'selected':''}>Consulta (visualização e relatórios)</option>
       </select></div>
       <div class="form-group"><label>Situação</label><select id="eUAtivo">

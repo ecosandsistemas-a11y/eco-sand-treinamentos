@@ -176,6 +176,7 @@ def init_db():
         pw = 'admin123'
         h = _hl.pbkdf2_hmac('sha256', pw.encode(), salt.encode(), 100000).hex()
         conn.execute("UPDATE users SET nome='Jéssica Celestino', password_hash=?, salt=?, ativo=1 WHERE username='admin'", (h, salt))
+    conn.execute("UPDATE users SET role='tecnico_seguranca' WHERE role='rh'")
     conn.commit()
     conn.close()
 
