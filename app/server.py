@@ -493,7 +493,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if method == 'GET':
                 if not require_perm(self, u, 'users'): return
                 conn = db.get_conn()
-                rows = conn.execute("SELECT id,username,role,nome,ativo,created_at FROM users ORDER BY username").fetchall()
+                rows = conn.execute("SELECT id,username,role,nome,colaborador_id,ativo,created_at FROM users ORDER BY username").fetchall()
                 conn.close()
                 json_resp(self, 200, [db.row_to_dict(r) for r in rows])
                 return
@@ -532,6 +532,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 sets.append('role=?'); params.append(body['role'])
             if body.get('ativo') is not None:
                 sets.append('ativo=?'); params.append(1 if body['ativo'] else 0)
+            if 'colaborador_id' in body:
+                sets.append('colaborador_id=?'); params.append(body.get('colaborador_id'))
             if body.get('password'):
                 import hashlib, secrets
                 salt = secrets.token_hex(16)
@@ -547,6 +549,55 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 conn.commit()
             except Exception as e:
                 conn.close(); json_resp(self, 400, {'error': str(e)}); return
+            conn.close()
+            json_resp(self, 200, {'ok': True})
+            return
+
+        # ---- meu perfil ----
+        if path == '/api/me/profile' and method == 'GET':
+            u = require_auth(self)
+            if not u: return
+            conn = db.get_conn()
+            colab = None
+            if u.get('colaborador_id'):
+                r = conn.execute("""SELECT c.*, s.nome AS setor_nome FROM colaboradores c LEFT JOIN setores s ON s.id=c.setor_id WHERE c.id=?""", (u['colaborador_id'],)).fetchone()
+                colab = db.row_to_dict(r) if r else None
+            setores = [db.row_to_dict(r) for r in conn.execute("SELECT id,nome FROM setores ORDER BY nome").fetchall()]
+            conn.close()
+            json_resp(self, 200, {'user': {'id':u['id'],'username':u['username'],'nome':u['nome'],'role':u['role']}, 'colaborador': colab, 'setores': setores})
+            return
+        if path == '/api/me/profile' and method == 'PUT':
+            u = require_auth(self)
+            if not u: return
+            body = read_body(self)
+            conn = db.get_conn()
+            # update user nome/password only (never role/permissions)
+            usets=[]; uparams=[]
+            if body.get('nome') is not None:
+                usets.append('nome=?'); uparams.append(body['nome'])
+            if body.get('password'):
+                import hashlib, secrets
+                salt = secrets.token_hex(16)
+                h = hashlib.pbkdf2_hmac('sha256', body['password'].encode(), salt.encode(), 100000).hex()
+                usets.append('password_hash=?'); uparams.append(h)
+                usets.append('salt=?'); uparams.append(salt)
+            if usets:
+                usets.append('updated_at=?'); uparams.append(db.now_iso())
+                uparams.append(u['id'])
+                conn.execute(f"UPDATE users SET {','.join(usets)} WHERE id=?", uparams)
+            # update linked colaborador nome/setor only
+            if u.get('colaborador_id') and body.get('colaborador'):
+                cdata = body['colaborador']
+                csets=[]; cparams=[]
+                if cdata.get('nome') is not None:
+                    csets.append('nome=?'); cparams.append(cdata['nome'])
+                if 'setor_id' in cdata:
+                    csets.append('setor_id=?'); cparams.append(cdata.get('setor_id'))
+                if csets:
+                    csets.append('updated_at=?'); cparams.append(db.now_iso())
+                    cparams.append(u['colaborador_id'])
+                    conn.execute(f"UPDATE colaboradores SET {','.join(csets)} WHERE id=?", cparams)
+            conn.commit()
             conn.close()
             json_resp(self, 200, {'ok': True})
             return

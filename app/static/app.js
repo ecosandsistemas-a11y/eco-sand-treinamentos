@@ -106,6 +106,7 @@ function layoutView() {
     ['pendencias','Pendências'],
     ['importacao','Importação'],
     ['usuarios','Usuários'],
+    ['perfil','Meu Perfil'],
     ['auditoria','Auditoria'],
     ['config','Configurações'],
   ];
@@ -153,6 +154,7 @@ async function loadRoute() {
       case 'pendencias': await viewPendencias(c); break;
       case 'importacao': await viewImportacao(c); break;
       case 'usuarios': await viewUsuarios(c); break;
+      case 'perfil': await viewPerfil(c); break;
       case 'auditoria': await viewAuditoria(c); break;
       case 'config': await viewConfig(c); break;
       default: c.innerHTML = '<div class="empty">Módulo não encontrado</div>';
@@ -904,6 +906,45 @@ async function viewImportacao(c) {
   };
 }
 
+
+async function viewPerfil(c) {
+  const data = await api('/api/me/profile');
+  const u = data.user;
+  const col = data.colaborador;
+  const setores = data.setores || [];
+  c.innerHTML = `<div class="card">
+    <h3 style="margin:0">Meu Perfil</h3>
+    <p style="font-size:12px;color:#6b7280;margin:8px 0;">Altere seu nome e senha. Permissões e perfil de acesso são gerenciados pelo administrador.</p>
+    <div class="form-grid">
+      <div class="form-group"><label>Usuário</label><input value="${esc(u.username)}" disabled /></div>
+      <div class="form-group"><label>Perfil de acesso</label><input value="${esc(u.role)}" disabled /></div>
+      <div class="form-group"><label>Nome</label><input id="pfNome" value="${esc(u.nome||'')}" /></div>
+      <div class="form-group"><label>Nova senha (deixe em branco para manter)</label><input id="pfPass" type="password" /></div>
+    </div>
+    ${col ? `<h4 style="margin-top:16px;">Meu cadastro (colaborador)</h4>
+    <div class="form-grid">
+      <div class="form-group"><label>Nome no cadastro</label><input id="pfColNome" value="${esc(col.nome||'')}" /></div>
+      <div class="form-group"><label>Setor</label><select id="pfColSetor"><option value="">--</option>${setores.map(s=>`<option value="${s.id}" ${col.setor_id==s.id?'selected':''}>${s.nome}</option>`).join('')}</select></div>
+    </div>` : `<p style="font-size:12px;color:#6b7280;margin-top:12px;">Nenhum colaborador vinculado ao seu usuário. Peça ao administrador para vincular.</p>`}
+    <div style="margin-top:12px;text-align:right;">
+      <button class="btn primary" id="btnSalvarPerfil">Salvar</button>
+    </div>
+  </div>`;
+  $('#btnSalvarPerfil').onclick = async () => {
+    try {
+      const body = { nome: $('#pfNome').value };
+      const pw = $('#pfPass').value;
+      if (pw) body.password = pw;
+      if (col) body.colaborador = { nome: $('#pfColNome').value, setor_id: $('#pfColSetor').value ? parseInt($('#pfColSetor').value) : null };
+      await api('/api/me/profile', {method:'PUT', body});
+      // update state.user nome
+      state.user.nome = body.nome;
+      alert('Perfil atualizado com sucesso.');
+      viewPerfil($('#content'));
+    } catch(e){ alert(e.message); }
+  };
+}
+
 // ---------- Usuarios ----------
 async function viewUsuarios(c) {
   const rows = await api('/api/users');
@@ -915,7 +956,7 @@ async function viewUsuarios(c) {
       </div>
       <div class="table-wrap" style="margin-top:12px;">
         <table><thead><tr><th>Usuário</th><th>Nome</th><th>Perfil</th><th>Situação</th><th>Ações</th></tr></thead><tbody>
-        ${rows.map(r=>`<tr><td>${r.username}</td><td>${r.nome||''}</td><td>${r.role}</td><td>${badgeAtivo(r.ativo)}</td><td><button class="btn small" onclick="editarUser(${r.id},'${esc(r.username)}','${esc(r.nome||'')}', '${r.role}', ${r.ativo})">Editar</button></td></tr>`).join('')}</tbody></table>
+        ${rows.map(r=>`<tr><td>${r.username}</td><td>${r.nome||''}</td><td>${r.role}</td><td>${badgeAtivo(r.ativo)}</td><td><button class="btn small" onclick="editarUser(${r.id},'${esc(r.username)}','${esc(r.nome||'')}', '${r.role}', ${r.ativo}, ${r.colaborador_id||'null'})">Editar</button></td></tr>`).join('')}</tbody></table>
       </div>
     </div>`;
   $('#btnNovoUser').onclick = () => {
@@ -972,7 +1013,8 @@ async function viewConfig(c) {
 init();
 
 
-window.editarUser = async (id, username, nome, role, ativo) => {
+window.editarUser = async (id, username, nome, role, ativo, colaborador_id) => {
+  const colabs = await api('/api/colaboradores');
   modal(`<h3>Editar usuário: ${esc(username)}</h3>
     <div class="form-grid">
       <div class="form-group"><label>Nome</label><input id="eUNome" value="${esc(nome)}"></div>
@@ -985,6 +1027,7 @@ window.editarUser = async (id, username, nome, role, ativo) => {
         <option value="1" ${ativo!==0?'selected':''}>Ativo</option>
         <option value="0" ${ativo===0?'selected':''}>Inativo</option>
       </select></div>
+      <div class="form-group"><label>Colaborador vinculado</label><select id="eUColab"><option value="">-- Nenhum --</option>${colabs.map(c=>`<option value="${c.id}" ${colaborador_id==c.id?'selected':''}>${c.nome}</option>`).join('')}</select></div>
       <div class="form-group"><label>Nova senha (deixe em branco para manter)</label><input id="eUPass" type="password"></div>
     </div>
     <div style="margin-top:12px;text-align:right;">
@@ -993,7 +1036,7 @@ window.editarUser = async (id, username, nome, role, ativo) => {
     </div>`);
   $('#btnSalvarEditUser').onclick = async () => {
     try {
-      const body = { nome: $('#eUNome').value, role: $('#eURole').value, ativo: $('#eUAtivo').value==='1' };
+      const body = { nome: $('#eUNome').value, role: $('#eURole').value, ativo: $('#eUAtivo').value==='1', colaborador_id: $('#eUColab').value ? parseInt($('#eUColab').value) : null };
       const pw = $('#eUPass').value;
       if (pw) body.password = pw;
       await api('/api/users/'+id, {method:'PUT', body});

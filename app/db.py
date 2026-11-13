@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS users (
   salt TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'consulta',
   nome TEXT,
+  colaborador_id INTEGER,
   ativo INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
@@ -177,6 +178,9 @@ def init_db():
         h = _hl.pbkdf2_hmac('sha256', pw.encode(), salt.encode(), 100000).hex()
         conn.execute("UPDATE users SET nome='Jéssica Celestino', password_hash=?, salt=?, ativo=1 WHERE username='admin'", (h, salt))
     conn.execute("UPDATE users SET role='tecnico_seguranca' WHERE role='rh'")
+    ucols = [r[1] for r in conn.execute("PRAGMA table_info(users)").fetchall()]
+    if 'colaborador_id' not in ucols:
+        conn.execute("ALTER TABLE users ADD COLUMN colaborador_id INTEGER")
     conn.commit()
     conn.close()
 
