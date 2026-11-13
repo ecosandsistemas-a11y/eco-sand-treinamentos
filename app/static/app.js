@@ -519,7 +519,7 @@ async function abrirFicha(id) {
     <div class="table-wrap"><table><thead><tr><th>Data</th><th>Treinamento</th><th>Status</th><th>Ações</th></tr></thead><tbody>
       ${ags.map(a=>`<tr>
         <td>${a.data_agendada_fmt}</td><td>${a.treinamento_nome}</td><td>${badge('agendado')}</td>
-        <td><button class="btn small" onclick="marcarAgendRealizadoFicha(${a.id},${c.id})">Marcar realizado</button> <button class="btn small" onclick="cancelarAgendFicha(${a.id},${c.id})">Cancelar</button></td>
+        <td><button class="btn small" onclick="editarAgendDataFicha(${a.id},'${a.data_agendada}',${c.id})">Editar data</button> <button class="btn small" onclick="marcarAgendRealizadoFicha(${a.id},${c.id})">Marcar realizado</button> <button class="btn small" onclick="excluirAgendFicha(${a.id},${c.id})">Excluir</button></td>
       </tr>`).join('')}</tbody></table></div>` : ''}
     <div style="margin-top:12px;text-align:right;">
       <button class="btn" onclick="registrarRealizacao(${c.id})">Registrar treinamento</button>
@@ -672,7 +672,7 @@ async function viewAgenda(c) {
       ${list.map(a=>`<tr>
         <td>${a.data_agendada_fmt}</td><td>${a.colaborador_nome}</td><td>${a.treinamento_nome}</td>
         <td>${a.status==='realizado'?'Realizado':(a.status==='cancelado'?'Cancelado':'Agendado')}</td>
-        <td>${a.status==='agendado' ? `<button class="btn small" onclick="marcarAgendRealizado(${a.id})">Marcar realizado</button> <button class="btn small" onclick="cancelarAgend(${a.id})">Cancelar</button>` : '-'}</td>
+        <td>${a.status==='agendado' ? `<button class="btn small" onclick="editarAgendData(${a.id},'${a.data_agendada}')">Editar data</button> <button class="btn small" onclick="marcarAgendRealizado(${a.id})">Marcar realizado</button> <button class="btn small" onclick="excluirAgend(${a.id})">Excluir</button>` : '-'}</td>
       </tr>`).join('')}</tbody></table></div>`;
   }
   renderAgend(agendamentos);
@@ -714,6 +714,29 @@ window.cancelarAgend = async (id) => {
   if (!confirm('Cancelar este agendamento?')) return;
   try {
     await api('/api/agendamentos/'+id+'/cancelar', {method:'POST', body:{}});
+    viewAgenda($('#content'));
+  } catch(e){ alert(e.message); }
+};
+
+window.editarAgendData = (id, current) => {
+  modal(`<h3>Editar data do compromisso</h3>
+    <div class="form-group"><label>Nova data</label><input id="edData" type="date" value="${current||''}"></div>
+    <div style="margin-top:12px;text-align:right;">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn primary" id="btnSalvarEdData">Salvar</button>
+    </div>`);
+  $('#btnSalvarEdData').onclick = async () => {
+    try {
+      await api('/api/agendamentos/'+id, {method:'PUT', body: {data_agendada: $('#edData').value}});
+      closeModal(); viewAgenda($('#content'));
+    } catch(e){ alert(e.message); }
+  };
+};
+
+window.excluirAgend = async (id) => {
+  if (!confirm('Excluir este compromisso agendado?')) return;
+  try {
+    await api('/api/agendamentos/'+id, {method:'DELETE'});
     viewAgenda($('#content'));
   } catch(e){ alert(e.message); }
 };
@@ -1165,6 +1188,29 @@ window.cancelarAgendFicha = async (id, colabId) => {
   if (!confirm('Cancelar este agendamento?')) return;
   try {
     await api('/api/agendamentos/'+id+'/cancelar', {method:'POST', body:{}});
+    abrirFicha(colabId);
+  } catch(e){ alert(e.message); }
+};
+
+window.editarAgendDataFicha = (id, current, colabId) => {
+  modal(`<h3>Editar data do compromisso</h3>
+    <div class="form-group"><label>Nova data</label><input id="edDataF" type="date" value="${current||''}"></div>
+    <div style="margin-top:12px;text-align:right;">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn primary" id="btnSalvarEdDataF">Salvar</button>
+    </div>`);
+  $('#btnSalvarEdDataF').onclick = async () => {
+    try {
+      await api('/api/agendamentos/'+id, {method:'PUT', body: {data_agendada: $('#edDataF').value}});
+      closeModal(); abrirFicha(colabId);
+    } catch(e){ alert(e.message); }
+  };
+};
+
+window.excluirAgendFicha = async (id, colabId) => {
+  if (!confirm('Excluir este compromisso agendado?')) return;
+  try {
+    await api('/api/agendamentos/'+id, {method:'DELETE'});
     abrirFicha(colabId);
   } catch(e){ alert(e.message); }
 };

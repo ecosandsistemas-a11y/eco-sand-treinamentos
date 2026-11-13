@@ -710,6 +710,28 @@ def marcar_agendamento_realizado(id, data_realizacao=None, user_id=None):
     audit(user_id, 'edicao', 'agendamento', id, 'status', 'agendado', 'realizado', None, 'manual')
     return True, None
 
+def update_agendamento(id, data, user_id=None):
+    conn = db.get_conn()
+    ag = conn.execute("SELECT * FROM agendamentos WHERE id=?", (id,)).fetchone()
+    if not ag:
+        conn.close(); return False, 'Não encontrado.'
+    if ag['status'] != 'agendado':
+        conn.close(); return False, 'Agendamento já finalizado.'
+    sets=[]; params=[]
+    if 'data_agendada' in data and data.get('data_agendada'):
+        sets.append('data_agendada=?'); params.append(data['data_agendada'])
+    if 'observacoes' in data:
+        sets.append('observacoes=?'); params.append(data.get('observacoes'))
+    if not sets:
+        conn.close(); return True, None
+    sets.append('updated_at=?'); params.append(db.now_iso())
+    sets.append('updated_by=?'); params.append(user_id)
+    params.append(id)
+    conn.execute(f"UPDATE agendamentos SET {','.join(sets)} WHERE id=?", params)
+    conn.commit()
+    conn.close()
+    return True, None
+
 def cancelar_agendamento(id, user_id=None):
     conn = db.get_conn()
     ag = conn.execute("SELECT * FROM agendamentos WHERE id=?", (id,)).fetchone()

@@ -636,14 +636,30 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 if not ok: json_resp(self, 400, {'error': err}); return
                 json_resp(self, 200, {'ok': True})
                 return
+        if path.startswith('/api/agendamentos/') and method == 'PUT':
+            if not require_perm(self, u, 'realizacoes'): return
+            aid = int(path.split('/')[-1])
+            body = read_body(self)
+            ok, err = models.update_agendamento(aid, body, u['id'])
+            if not ok: json_resp(self, 400, {'error': err}); return
+            json_resp(self, 200, {'ok': True})
+            return
 
         if path.startswith('/api/agendamentos/') and method == 'DELETE':
-            if not require_perm(self, u, 'delete'): return
             aid = int(path.split('/')[-1])
             conn = db.get_conn()
             ag = conn.execute("SELECT * FROM agendamentos WHERE id=?", (aid,)).fetchone()
             if not ag:
                 conn.close(); json_resp(self, 404, {'error': 'Não encontrado.'}); return
+            # permission: admin delete always; realizacoes perm only for agendado (not realized)
+            if ag['status'] == 'agendado':
+                if not (auth.has_perm(u, 'delete') or auth.has_perm(u, 'realizacoes')):
+                    conn.close(); json_resp(self, 403, {'error': 'Sem permissão'}); return
+            else:
+                if not auth.has_perm(u, 'delete'):
+                    conn.close(); json_resp(self, 403, {'error': 'Sem permissão'}); return
+            # re-fetch not needed
+
             if ag['realizacao_id']:
                 conn.execute("DELETE FROM pendencias_acomp WHERE realizacao_id=?", (ag['realizacao_id'],))
                 conn.execute("DELETE FROM agendamentos WHERE id=?", (aid,))
