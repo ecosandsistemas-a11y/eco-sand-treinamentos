@@ -536,6 +536,7 @@ async function abrirFicha(id) {
       </tr>`).join('')}</tbody></table></div>` : ''}
     <div style="margin-top:12px;text-align:right;">
       <button class="btn" data-edicao="1" onclick="registrarRealizacao(${c.id})">Registrar treinamento</button>
+      <button class="btn" onclick="relIndividual(${c.id})">Imprimir relatório</button>
       <button class="btn primary" onclick="closeModal()">Fechar</button>
     </div>`);
 
@@ -597,6 +598,8 @@ async function viewRealizacoes(c) {
     if ($('#rfStatus').value) qs.set('status', $('#rfStatus').value);
     if ($('#rfAno').value) qs.set('ano', $('#rfAno').value);
     const rows = await api('/api/realizacoes?'+qs.toString());
+    const realizados = state.user.role === 'admin' ? await api('/api/agendamentos?status=realizado') : [];
+    const porRealizacao = new Map(realizados.filter(a => a.realizacao_id).map(a => [a.realizacao_id, a.id]));
     $('#realTable').innerHTML = `<div class="table-wrap"><table><thead><tr><th>Colaborador</th><th>Treinamento</th><th>Setor</th><th>Última realização</th><th>Prazo</th><th>Vencimento</th><th>Dias</th><th>Situação</th><th>Ações</th></tr></thead><tbody>
       ${rows.map(r=>`<tr>
         <td>${r.colaborador_nome}</td><td>${r.treinamento_nome}</td><td>${r.setor_nome||''}</td>
@@ -605,6 +608,7 @@ async function viewRealizacoes(c) {
         <td>
           <button class="btn small" data-edicao="1" onclick="editarReal(${r.id})">Editar</button>
           <button class="btn small" onclick="verHistorico(${r.colaborador_id},${r.treinamento_id})">Hist.</button>
+          ${porRealizacao.has(r.id) ? `<button class="btn small" onclick="excluirRealizadoAgendado(${porRealizacao.get(r.id)})">Excluir realizado</button>` : ''}
         </td>
       </tr>`).join('')}</tbody></table></div>
       <div style="margin-top:8px;color:#6b7280;font-size:12px;">Total: ${rows.length}</div>`;
@@ -615,6 +619,15 @@ async function viewRealizacoes(c) {
   $('#btnNovaReal').onclick = () => modalFormReal();
   await load();
 }
+
+window.excluirRealizadoAgendado = async (id) => {
+  const motivo = prompt('Informe a justificativa para excluir este treinamento realizado. A realização também será removida:');
+  if (motivo === null) return;
+  if (!motivo.trim()) { alert('Justificativa obrigatória.'); return; }
+  if (!confirm('Confirma a exclusão do compromisso e do registro de realização?')) return;
+  try { await api('/api/agendamentos/'+id, {method:'DELETE', body:{motivo: motivo.trim()}}); viewRealizacoes($('#content')); }
+  catch(e) { alert(e.message); }
+};
 
 async function modalFormReal(id=null, data={}) {
   const colabs = await api('/api/colaboradores');
@@ -694,7 +707,7 @@ window.verHistorico = async (colabId, treinId) => {
 
 // ---------- Agenda ----------
 async function viewAgenda(c) {
-  const agendamentos = await api('/api/agendamentos');
+  const agendamentos = await api('/api/agendamentos?status=agendado');
   const colaboradores = await api('/api/colaboradores');
   const treinamentos = await api('/api/treinamentos');
   c.innerHTML = `
@@ -799,13 +812,12 @@ async function viewRelatorios(c) {
     <div class="card">
       <h3>Relatórios</h3>
       <div class="filters">
-        <button class="btn" onclick="relGeral()">Geral por ano</button>
+        <button class="btn" onclick="relGeral()">Detalhado por ano de vencimento</button>
         <button class="btn" onclick="relTreinamento()">Por treinamento</button>
         <button class="btn" onclick="relColaborador()">Por colaborador</button>
         <button class="btn" onclick="relSetor()">Por setor</button>
         <button class="btn" onclick="relMensal()">Mensal</button>
-        <button class="btn" onclick="relAnual()">Anual</button>
-        <button class="btn" onclick="relIndividual()">Individual (impressão)</button>
+        <button class="btn" onclick="relAnual()">Resumo de vencimentos por ano</button>
       </div>
       <div id="relContent"></div>
     </div>`;
@@ -819,7 +831,7 @@ async function relGeral() {
   const prox = rows.filter(r=>r.status==='proximo').length;
   const venc = rows.filter(r=>r.status==='vencido').length;
   const inc = rows.filter(r=>r.status==='dados_incompletos').length;
-  $('#relContent').innerHTML = `<h4>Relatório geral por ano - ${ano}</h4>
+  $('#relContent').innerHTML = `<h4>Vencimentos detalhados do ano ${textoSeguro(ano)}</h4>
     <div class="grid cols-4">
       <div class="kpi"><div class="label">Total</div><div class="value">${total}</div></div>
       <div class="kpi success"><div class="label">Em dia</div><div class="value">${emdia}</div></div>
@@ -858,6 +870,7 @@ async function relColaborador() {
   const c = r.colaborador; const regs = r.realizacoes;
   $('#relContent').innerHTML = `<h4>Relatório por colaborador - ${c.nome}</h4>
     <p>Código: ${c.codigo||'-'} | Cargo: ${c.cargo_nome||'-'} | Setor: ${c.setor_nome||'-'}</p>
+    <button class="btn" onclick="relIndividual(${c.id})">Imprimir relatório</button>
     <div class="table-wrap"><table><thead><tr><th>Treinamento</th><th>Última realização</th><th>Prazo</th><th>Vencimento</th><th>Situação</th></tr></thead><tbody>
       ${regs.map(x=>`<tr><td>${x.treinamento_nome}</td><td>${x.data_realizacao_fmt}</td><td>${x.prazo_validade_dias==null?'-':x.prazo_validade_dias}</td><td>${x.data_vencimento_fmt||'-'}</td><td>${badge(x.status)}</td></tr>`).join('')}</tbody></table></div>`;
 }
@@ -912,17 +925,17 @@ async function relMensal() {
 }
 async function relAnual() {
   const rows = await api('/api/relatorio/anual');
-  $('#relContent').innerHTML = `<h4>Relatório anual de vencimentos</h4>
+  $('#relContent').innerHTML = `<h4>Resumo de vencimentos por ano</h4>
     <div class="table-wrap"><table><thead><tr><th>Ano</th><th>Total</th><th>Em dia</th><th>Próximo</th><th>Vencido</th><th>Incompleto</th></tr></thead><tbody>
       ${rows.map(r=>`<tr><td>${r.ano}</td><td>${r.total}</td><td>${r.em_dia}</td><td>${r.proximo}</td><td>${r.vencido}</td><td>${r.incompleto}</td></tr>`).join('')}</tbody></table></div>`;
 }
-async function relIndividual() {
-  const colabs = await api('/api/colaboradores');
-  const id = prompt('ID do colaborador:\n' + colabs.map(c=>c.id+' - '+c.nome).join('\n'));
-  if (!id) return;
-  const r = await api('/api/colaboradores/'+id+'/ficha');
-  const c = r.colaborador; const regs = r.realizacoes;
+async function relIndividual(id) {
   const w = window.open('', '_blank');
+  if (!w) { alert('Permita pop-ups para imprimir o relatório.'); return; }
+  let r;
+  try { r = await api('/api/colaboradores/'+id+'/ficha'); }
+  catch(e) { w.close(); alert(e.message); return; }
+  const c = r.colaborador; const regs = r.realizacoes;
   w.document.write(`<!DOCTYPE html><html><head><title>Relatório Individual</title>
     <style>body{font-family:Arial,sans-serif;padding:20px;} table{width:100%;border-collapse:collapse;font-size:12px;} th,td{border:1px solid #ccc;padding:6px;} th{background:#eee;} .header{text-align:center;margin-bottom:20px;} </style></head><body>
     <div class="header"><img src="/static/logo.png" alt="Eco Sand" style="max-height:60px;margin-bottom:8px;" /><h3>Relatório Individual de Treinamentos</h3><p>Data de emissão: ${new Date().toLocaleDateString('pt-BR')}</p></div>
