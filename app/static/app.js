@@ -76,7 +76,6 @@ function loginView() {
     <label style="display:flex;align-items:center;gap:6px;font-size:13px;margin:8px 0;"><input type="checkbox" id="remember" /> Lembrar-me (salvar acesso)</label>
     <button class="btn primary" style="width:100%" id="btnLogin">Entrar</button>
     <div id="loginErr" style="color:#dc2626;font-size:13px;margin-top:8px;"></div>
-    <p style="font-size:11px;color:#6b7280;margin-top:12px;">Padrão: admin / admin123</p>
   </div></div>`;
 }
 function bindLogin() {
