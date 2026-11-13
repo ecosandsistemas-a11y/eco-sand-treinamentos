@@ -460,6 +460,8 @@ def list_realizacoes(filtros=None):
             q += " AND substr(r.data_vencimento,6,2)=?"; params.append(str(filtros['mes']).zfill(2))
         if filtros.get('colab_ativo') is not None:
             q += " AND c.ativo=?"; params.append(1 if filtros['colab_ativo'] else 0)
+        if filtros.get('situacao_colaborador'):
+            q += " AND c.situacao=?"; params.append(filtros['situacao_colaborador'])
         if filtros.get('excluir_afastados'):
             q += " AND c.situacao!='afastado'" 
         if filtros.get('busca'):

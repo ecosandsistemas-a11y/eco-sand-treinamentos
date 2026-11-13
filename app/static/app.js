@@ -571,7 +571,7 @@ async function viewRealizacoes(c) {
   const setores = await api('/api/setores');
   const cargos = await api('/api/cargos');
   const treins = await api('/api/treinamentos');
-  const colabs = await api('/api/colaboradores');
+  const colabs = await api('/api/colaboradores?situacao=ativo');
   c.innerHTML = `
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
@@ -591,7 +591,7 @@ async function viewRealizacoes(c) {
       <div id="realTable"></div>
     </div>`;
   async function load() {
-    const qs = new URLSearchParams();
+    const qs = new URLSearchParams({situacao_colaborador:'ativo'});
     if ($('#rfColab').value) qs.set('colaborador_id', $('#rfColab').value);
     if ($('#rfTrein').value) qs.set('treinamento_id', $('#rfTrein').value);
     if ($('#rfSetor').value) qs.set('setor_id', $('#rfSetor').value);

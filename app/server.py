@@ -305,6 +305,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 filtros = {}
                 for k in ['colaborador_id','treinamento_id','setor_id','cargo_id','ano','mes','status','busca','data_inicio','data_fim']:
                     if qs.get(k): filtros[k] = qs[k][0]
+                if qs.get('situacao_colaborador'): filtros['situacao_colaborador'] = qs['situacao_colaborador'][0]
                 if qs.get('colab_ativo'): filtros['colab_ativo'] = (qs['colab_ativo'][0]=='1')
                 if filtros.get('colaborador_id'): filtros['colaborador_id']=int(filtros['colaborador_id'])
                 if filtros.get('treinamento_id'): filtros['treinamento_id']=int(filtros['treinamento_id'])
