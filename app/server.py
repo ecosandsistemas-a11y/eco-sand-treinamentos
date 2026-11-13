@@ -156,10 +156,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if path == '/api/logout' and method == 'POST':
             t = get_token(self)
             if t: auth.delete_session(t)
+            data = b'{"ok":true}'
             self.send_response(200)
             self.send_header('Content-Type','application/json')
+            self.send_header('Content-Length', str(len(data)))
             self.send_header('Set-Cookie','session=; Path=/; Max-Age=0')
             self.end_headers()
+            self.wfile.write(data)
             self.wfile.write(b'{"ok":true}')
             return
         if path == '/api/me' and method == 'GET':
