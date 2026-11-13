@@ -656,9 +656,13 @@ async function viewAgenda(c) {
   c.innerHTML = `
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <h3 style="margin:0">Agenda de vencimentos</h3>
+        <h3 style="margin:0">Compromissos agendados</h3>
         <button class="btn primary" id="btnNovoAgend">Agendar treinamento</button>
       </div>
+      <div id="agendTable"></div>
+    </div>
+    <div class="card" style="margin-top:12px;">
+      <h3>Agenda de vencimentos</h3>
       <div class="filters">
         <div class="form-group"><label>Filtro rápido</label><select id="agFiltro">
           <option value="todos">Todos</option>
@@ -673,10 +677,6 @@ async function viewAgenda(c) {
         <button class="btn" id="agAplicar">Aplicar</button>
       </div>
       <div id="agTable"></div>
-    </div>
-    <div class="card" style="margin-top:12px;">
-      <h3>Compromissos agendados</h3>
-      <div id="agendTable"></div>
     </div>`;
   function renderTable(list) {
     $('#agTable').innerHTML = `<div class="table-wrap"><table><thead><tr><th>Colaborador</th><th>Setor</th><th>Treinamento</th><th>Realização</th><th>Vencimento</th><th>Dias</th><th>Situação</th></tr></thead><tbody>
