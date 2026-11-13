@@ -121,3 +121,5 @@ body.dark .calendar-day.has { background: #78350f; }
 .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid #ccc; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .theme-toggle { position: fixed; bottom: 16px; right: 16px; z-index: 300; }
+/* Ações de alteração não são exibidas no perfil de consulta. */
+.somente-consulta [data-edicao="1"] { display: none !important; }

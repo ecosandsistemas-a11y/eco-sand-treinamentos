@@ -112,7 +112,7 @@ function layoutView() {
     links.push(['auditoria','Auditoria']);
     links.push(['config','Configurações']);
   }
-  return `<div class="layout">
+  return `<div class="layout ${state.user && state.user.role === 'consulta' ? 'somente-consulta' : ''}">
     <aside class="sidebar" id="sidebar">
       <img src="/static/logo.png" alt="Eco Sand" style="max-width:100%;height:auto;margin-bottom:8px;" />
       <div class="sub">Gestão de Treinamentos</div>
@@ -128,7 +128,7 @@ function layoutView() {
       <div id="content"></div>
     </main>
   </div>
-  <div class="modal-backdrop" id="modalBackdrop"><div class="modal" id="modal"></div></div>`;
+  <div class="modal-backdrop ${state.user && state.user.role === 'consulta' ? 'somente-consulta' : ''}" id="modalBackdrop"><div class="modal" id="modal"></div></div>`;
 }
 function bindLayout() {
   $('#logout').onclick = async (e) => { e.preventDefault(); await api('/api/logout',{method:'POST'}); localStorage.removeItem('eco_token'); state.user=null; state.route='dashboard'; try { history.replaceState(null,'','#'); } catch(e){} render(); };
@@ -279,13 +279,13 @@ async function viewSetores(c) {
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <h3 style="margin:0">Setores</h3>
-        <button class="btn primary" id="btnNovoSetor">Novo setor</button>
+        <button class="btn primary" data-edicao="1" id="btnNovoSetor">Novo setor</button>
       </div>
       <div class="table-wrap" style="margin-top:12px;">
         <table><thead><tr><th>Nome</th><th>Descrição</th><th>Situação</th><th>Ações</th></tr></thead><tbody>
         ${rows.map(r=>`<tr>
           <td>${r.nome}</td><td>${r.descricao||''}</td><td>${badgeAtivo(r.ativo)}</td>
-          <td><button class="btn small" onclick="editarSetor(${r.id},'${esc(r.nome)}','${esc(r.descricao||'')}',${r.ativo})">Editar</button></td>
+          <td><button class="btn small" data-edicao="1" onclick="editarSetor(${r.id},'${esc(r.nome)}','${esc(r.descricao||'')}',${r.ativo})">Editar</button></td>
         </tr>`).join('')}
         </tbody></table>
       </div>
@@ -321,13 +321,13 @@ async function viewCargos(c) {
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <h3 style="margin:0">Cargos</h3>
-        <button class="btn primary" id="btnNovoCargo">Novo cargo</button>
+        <button class="btn primary" data-edicao="1" id="btnNovoCargo">Novo cargo</button>
       </div>
       <div class="table-wrap" style="margin-top:12px;">
         <table><thead><tr><th>Nome</th><th>Descrição</th><th>Situação</th><th>Ações</th></tr></thead><tbody>
         ${rows.map(r=>`<tr>
           <td>${r.nome}</td><td>${r.descricao||''}</td><td>${badgeAtivo(r.ativo)}</td>
-          <td><button class="btn small" onclick="editarCargo(${r.id},'${esc(r.nome)}','${esc(r.descricao||'')}')">Editar</button></td>
+          <td><button class="btn small" data-edicao="1" onclick="editarCargo(${r.id},'${esc(r.nome)}','${esc(r.descricao||'')}')">Editar</button></td>
         </tr>`).join('')}
         </tbody></table>
       </div>
@@ -362,14 +362,14 @@ async function viewTreinamentos(c) {
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <h3 style="margin:0">Treinamentos / Cursos</h3>
-        <button class="btn primary" id="btnNovoTrein">Novo treinamento</button>
+        <button class="btn primary" data-edicao="1" id="btnNovoTrein">Novo treinamento</button>
       </div>
       <div class="table-wrap" style="margin-top:12px;">
         <table><thead><tr><th>Nome</th><th>Código</th><th>Categoria</th><th>Prazo (dias)</th><th>Situação</th><th>Ações</th></tr></thead><tbody>
         ${rows.map(r=>`<tr>
           <td>${r.nome}</td><td>${r.codigo||''}</td><td>${r.categoria||''}</td><td>${r.prazo_validade_dias==null?'Sem validade':r.prazo_validade_dias}</td>
           <td>${badgeAtivo(r.ativo)}</td>
-          <td><button class="btn small" onclick="editarTrein(${r.id})">Editar</button></td>
+          <td><button class="btn small" data-edicao="1" onclick="editarTrein(${r.id})">Editar</button></td>
         </tr>`).join('')}
         </tbody></table>
       </div>
@@ -416,7 +416,7 @@ async function viewColaboradores(c) {
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
         <h3 style="margin:0">Colaboradores</h3>
-        <button class="btn primary" id="btnNovoColab">Novo colaborador</button>
+        <button class="btn primary" data-edicao="1" id="btnNovoColab">Novo colaborador</button>
       </div>
       <div class="filters">
         <div class="form-group"><label>Busca</label><input id="cb" placeholder="nome ou código"></div>
@@ -439,7 +439,7 @@ async function viewColaboradores(c) {
         <td>${r.nome}</td><td>${r.codigo||''}</td><td>${r.setor_nome||''}</td><td>${r.cargo_nome||''}</td><td>${badgeSituacao(r.situacao|| (r.ativo?'ativo':'inativo'))}</td>
         <td>
           <button class="btn small" onclick="abrirFicha(${r.id})">Ficha</button>
-          <button class="btn small" onclick="editarColab(${r.id})">Editar</button>
+          <button class="btn small" data-edicao="1" onclick="editarColab(${r.id})">Editar</button>
         </td>
       </tr>`).join('')}</tbody></table></div>`;
   }
@@ -504,8 +504,8 @@ async function abrirFicha(id) {
         <p style="margin:0;"><strong>${c.nome}</strong><br>Código: ${c.codigo||'-'} | Cargo: ${c.cargo_nome||'-'} | Setor: ${c.setor_nome||'-'} | Situação: ${badgeSituacao(c.situacao|| (c.ativo?'ativo':'inativo'))}</p>
         <div style="margin-top:6px;">
           <input type="file" id="fotoInput" accept="image/*" style="display:none;">
-          <button class="btn small" id="btnFoto">Adicionar/Alterar foto</button>
-          ${c.foto ? '<button class="btn small" id="btnRemFoto">Remover foto</button>' : ''}
+          <button class="btn small" data-edicao="1" id="btnFoto">Adicionar/Alterar foto</button>
+          ${c.foto ? '<button class="btn small" data-edicao="1" id="btnRemFoto">Remover foto</button>' : ''}
         </div>
       </div>
     </div>
@@ -522,7 +522,7 @@ async function abrirFicha(id) {
         <td>${r.data_vencimento_fmt||'-'}</td><td>${r.dias==null?'-':r.dias}</td><td>${badge(r.status)}</td>
         <td>
           <button class="btn small" onclick="verHistorico(${c.id},${r.treinamento_id})">Histórico</button>
-          <button class="btn small" onclick="registrarRealizacao(${c.id},${r.treinamento_id})">Renovar</button>
+          <button class="btn small" data-edicao="1" onclick="registrarRealizacao(${c.id},${r.treinamento_id})">Renovar</button>
         </td>
       </tr>`).join('')}
       </tbody></table>
@@ -531,10 +531,10 @@ async function abrirFicha(id) {
     <div class="table-wrap"><table><thead><tr><th>Data</th><th>Treinamento</th><th>Status</th><th>Ações</th></tr></thead><tbody>
       ${ags.map(a=>`<tr>
         <td>${a.data_agendada_fmt}</td><td>${a.treinamento_nome}</td><td>${badge('agendado')}</td>
-        <td><button class="btn small" onclick="editarAgendDataFicha(${a.id},'${a.data_agendada}',${c.id})">Editar data</button> <button class="btn small" onclick="marcarAgendRealizadoFicha(${a.id},${c.id})">Marcar realizado</button> <button class="btn small" onclick="excluirAgendFicha(${a.id},${c.id})">Excluir</button></td>
+        <td><button class="btn small" data-edicao="1" onclick="editarAgendDataFicha(${a.id},'${a.data_agendada}',${c.id})">Editar data</button> <button class="btn small" data-edicao="1" onclick="marcarAgendRealizadoFicha(${a.id},${c.id})">Marcar realizado</button> <button class="btn small" data-edicao="1" onclick="excluirAgendFicha(${a.id},${c.id})">Excluir</button></td>
       </tr>`).join('')}</tbody></table></div>` : ''}
     <div style="margin-top:12px;text-align:right;">
-      <button class="btn" onclick="registrarRealizacao(${c.id})">Registrar treinamento</button>
+      <button class="btn" data-edicao="1" onclick="registrarRealizacao(${c.id})">Registrar treinamento</button>
       <button class="btn primary" onclick="closeModal()">Fechar</button>
     </div>`);
 
@@ -574,7 +574,7 @@ async function viewRealizacoes(c) {
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
         <h3 style="margin:0">Realizações de treinamento</h3>
-        <button class="btn primary" id="btnNovaReal">Nova realização</button>
+        <button class="btn primary" data-edicao="1" id="btnNovaReal">Nova realização</button>
       </div>
       <div class="filters">
         <div class="form-group"><label>Colaborador</label><select id="rfColab"><option value="">Todos</option>${colabs.map(x=>`<option value="${x.id}">${x.nome}</option>`).join('')}</select></div>
@@ -602,7 +602,7 @@ async function viewRealizacoes(c) {
         <td>${r.data_realizacao_fmt}</td><td>${r.prazo_validade_dias==null?'-':r.prazo_validade_dias}</td>
         <td>${r.data_vencimento_fmt||'-'}</td><td>${r.dias==null?'-':r.dias}</td><td>${badge(r.status)}</td>
         <td>
-          <button class="btn small" onclick="editarReal(${r.id})">Editar</button>
+          <button class="btn small" data-edicao="1" onclick="editarReal(${r.id})">Editar</button>
           <button class="btn small" onclick="verHistorico(${r.colaborador_id},${r.treinamento_id})">Hist.</button>
         </td>
       </tr>`).join('')}</tbody></table></div>
@@ -700,7 +700,7 @@ async function viewAgenda(c) {
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <h3 style="margin:0">Compromissos agendados</h3>
-        <button class="btn primary" id="btnNovoAgend">Agendar treinamento</button>
+        <button class="btn primary" data-edicao="1" id="btnNovoAgend">Agendar treinamento</button>
       </div>
       <div id="agendTable"></div>
     </div>`;
@@ -709,8 +709,8 @@ async function viewAgenda(c) {
       ${list.map(a=>`<tr>
         <td>${a.data_agendada_fmt}</td><td>${a.colaborador_nome}</td><td>${a.treinamento_nome}</td>
         <td>${a.status==='realizado'?'Realizado':(a.status==='cancelado'?'Cancelado':'Agendado')}</td>
-        <td>${a.status==='agendado' ? `<button class="btn small" onclick="editarAgendData(${a.id},'${a.data_agendada}')">Editar data</button> <button class="btn small" onclick="marcarAgendRealizado(${a.id})">Marcar realizado</button> <button class="btn small" onclick="excluirAgend(${a.id},false)">Excluir</button>` :
-            (a.status==='realizado' ? `<button class="btn small" onclick="excluirAgend(${a.id},true)">Excluir</button>` : '-')}</td>
+        <td>${a.status==='agendado' ? `<button class="btn small" data-edicao="1" onclick="editarAgendData(${a.id},'${a.data_agendada}')">Editar data</button> <button class="btn small" data-edicao="1" onclick="marcarAgendRealizado(${a.id})">Marcar realizado</button> <button class="btn small" data-edicao="1" onclick="excluirAgend(${a.id},false)">Excluir</button>` :
+            (a.status==='realizado' ? `<button class="btn small" data-edicao="1" onclick="excluirAgend(${a.id},true)">Excluir</button>` : '-')}</td>
       </tr>`).join('')}</tbody></table></div>`;
   }
   renderAgend(agendamentos);
@@ -948,15 +948,15 @@ async function viewPendencias(c) {
 function acoesPendencia(r) {
   const btns = [];
   if (r.status === 'dados_incompletos') {
-    btns.push(`<button class="btn small" onclick="editarRealizacaoPend(${r.id})">Editar dados</button>`);
+    btns.push(`<button class="btn small" data-edicao="1" onclick="editarRealizacaoPend(${r.id})">Editar dados</button>`);
   }
   if (r.status === 'vencido' || r.status === 'proximo') {
-    btns.push(`<button class="btn small" onclick="agendarPend(${r.colaborador_id||0},${r.treinamento_id||0})">Agendar treinamento</button>`);
+    btns.push(`<button class="btn small" data-edicao="1" onclick="agendarPend(${r.colaborador_id||0},${r.treinamento_id||0})">Agendar treinamento</button>`);
   }
   if (r.status === 'vencido') {
-    btns.push(`<button class="btn small" onclick="naoNecessarioPend(${r.id})">Treinamento não necessário</button>`);
+    btns.push(`<button class="btn small" data-edicao="1" onclick="naoNecessarioPend(${r.id})">Treinamento não necessário</button>`);
   }
-  btns.push(`<button class="btn small" onclick="acompanhar(${r.id})">Acompanhar</button>`);
+  btns.push(`<button class="btn small" data-edicao="1" onclick="acompanhar(${r.id})">Acompanhar</button>`);
   return btns.join(' ');
 }
 
@@ -1100,8 +1100,8 @@ async function viewPerfil(c) {
     </div>
     ${col ? `<h4 style="margin-top:16px;">Meu cadastro (colaborador)</h4>
     <div class="form-grid">
-      <div class="form-group"><label>Nome no cadastro</label><input id="pfColNome" value="${esc(col.nome||'')}" /></div>
-      <div class="form-group"><label>Setor</label><select id="pfColSetor"><option value="">--</option>${setores.map(s=>`<option value="${s.id}" ${col.setor_id==s.id?'selected':''}>${s.nome}</option>`).join('')}</select></div>
+      <div class="form-group"><label>Nome no cadastro</label><input id="pfColNome" value="${esc(col.nome||'')}" ${state.user.role === 'consulta' ? 'disabled' : ''} /></div>
+      <div class="form-group"><label>Setor</label><select id="pfColSetor" ${state.user.role === 'consulta' ? 'disabled' : ''}><option value="">--</option>${setores.map(s=>`<option value="${s.id}" ${col.setor_id==s.id?'selected':''}>${s.nome}</option>`).join('')}</select></div>
     </div>` : `<p style="font-size:12px;color:#6b7280;margin-top:12px;">Nenhum colaborador vinculado ao seu usuário. Peça ao administrador para vincular.</p>`}
     <div style="margin-top:12px;text-align:right;">
       <button class="btn primary" id="btnSalvarPerfil">Salvar</button>

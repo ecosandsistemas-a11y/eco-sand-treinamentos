@@ -176,6 +176,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
         u = require_auth(self)
         if not u: return
 
+        # Consulta pode apenas ler dados; a gestão do próprio usuário é a única exceção.
+        if u.get('role') == 'consulta' and method not in ('GET', 'HEAD') and path != '/api/me/profile':
+            json_resp(self, 403, {'error': 'Perfil de consulta: acesso somente para leitura.'}); return
+
         # ---- setores ----
         if path == '/api/setores':
             if method == 'GET':
@@ -588,7 +592,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 uparams.append(u['id'])
                 conn.execute(f"UPDATE users SET {','.join(usets)} WHERE id=?", uparams)
             # update linked colaborador nome/setor only
-            if u.get('colaborador_id') and body.get('colaborador'):
+            if u.get('role') != 'consulta' and u.get('colaborador_id') and body.get('colaborador'):
                 cdata = body['colaborador']
                 csets=[]; cparams=[]
                 if cdata.get('nome') is not None:
