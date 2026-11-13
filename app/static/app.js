@@ -93,6 +93,7 @@ function bindLogin() {
 }
 
 function layoutView() {
+  const isAdmin = state.user && state.user.role === 'admin';
   const links = [
     ['dashboard','Dashboard'],
     ['colaboradores','Colaboradores'],
@@ -103,12 +104,14 @@ function layoutView() {
     ['agenda','Agenda'],
     ['relatorios','Relatórios'],
     ['pendencias','Pendências'],
-    ['importacao','Importação'],
-    ['usuarios','Usuários'],
     ['perfil','Meu Perfil'],
-    ['auditoria','Auditoria'],
-    ['config','Configurações'],
   ];
+  if (isAdmin) {
+    links.push(['importacao','Importação']);
+    links.push(['usuarios','Usuários']);
+    links.push(['auditoria','Auditoria']);
+    links.push(['config','Configurações']);
+  }
   return `<div class="layout">
     <aside class="sidebar" id="sidebar">
       <img src="/static/logo.png" alt="Eco Sand" style="max-width:100%;height:auto;margin-bottom:8px;" />
