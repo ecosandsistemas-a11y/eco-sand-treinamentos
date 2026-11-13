@@ -172,7 +172,7 @@ function modal(html) {
   $('#modalBackdrop').style.display = 'flex';
   $('#modalBackdrop').onclick = (e) => { if (e.target.id==='modalBackdrop') closeModal(); };
 }
-function closeModal() { $('#modalBackdrop').style.display = 'none'; }
+function closeModal() { $('#modalBackdrop').style.display = 'none'; $('#modal').style.maxWidth = ''; }
 
 async function viewDashboard(c) {
   const f = filtersState.dashboard || {};
@@ -538,6 +538,7 @@ async function abrirFicha(id) {
       <button class="btn primary" onclick="closeModal()">Fechar</button>
     </div>`);
 
+  $('#modal').style.maxWidth = '900px';
   const fotoInput = $('#fotoInput');
   const btnFoto = $('#btnFoto');
   if (btnFoto) btnFoto.onclick = () => fotoInput.click();
