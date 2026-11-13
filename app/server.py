@@ -333,7 +333,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     json_resp(self, 200, {'ok': True})
                     return
                 if method == 'DELETE':
-                    if not require_perm(self, u, 'delete'): return
+                    if not (auth.has_perm(u, 'delete') or auth.has_perm(u, 'pendencias')):
+                        json_resp(self, 403, {'error': 'Sem permissão'}); return
                     models.delete_realizacao(rid, u['id'], u['username'])
                     json_resp(self, 200, {'ok': True})
                     return

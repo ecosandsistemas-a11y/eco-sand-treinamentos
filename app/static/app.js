@@ -896,15 +896,91 @@ async function viewPendencias(c) {
   c.innerHTML = `
     <div class="card">
       <h3>Central de pendências</h3>
-      <div class="table-wrap"><table><thead><tr><th>Colaborador</th><th>Treinamento</th><th>Situação</th><th>Vencimento</th><th>Dias</th><th>Acompanhamento</th><th>Ações</th></tr></thead><tbody>
+      <div class="table-wrap"><table><thead><tr><th>Colaborador</th><th>Treinamento</th><th>Situação</th><th>Vencimento</th><th>Dias</th><th>Ações</th></tr></thead><tbody>
       ${rows.map(r=>`<tr>
         <td>${r.colaborador_nome}</td><td>${r.treinamento_nome}</td><td>${badge(r.status)}</td>
         <td>${r.data_vencimento_fmt||'-'}</td><td>${r.dias==null?'-':r.dias}</td>
-        <td>${r.acomp? r.acomp.status_acomp : 'pendente'}</td>
-        <td><button class="btn small" onclick="acompanhar(${r.id})">Acompanhar</button></td>
+        <td>${acoesPendencia(r)}</td>
       </tr>`).join('')}</tbody></table></div>
     </div>`;
 }
+
+function acoesPendencia(r) {
+  const btns = [];
+  if (r.status === 'dados_incompletos') {
+    btns.push(`<button class="btn small" onclick="editarRealizacaoPend(${r.id})">Editar dados</button>`);
+  }
+  if (r.status === 'vencido' || r.status === 'proximo') {
+    btns.push(`<button class="btn small" onclick="agendarPend(${r.colaborador_id||0},${r.treinamento_id||0})">Agendar treinamento</button>`);
+  }
+  if (r.status === 'vencido') {
+    btns.push(`<button class="btn small" onclick="naoNecessarioPend(${r.id})">Treinamento não necessário</button>`);
+  }
+  btns.push(`<button class="btn small" onclick="acompanhar(${r.id})">Acompanhar</button>`);
+  return btns.join(' ');
+}
+
+window.editarRealizacaoPend = async (rid) => {
+  const r = await api('/api/realizacoes/'+rid);
+  modal(`<h3>Editar realização (dados incompletos)</h3>
+    <div class="form-grid">
+      <div class="form-group"><label>Data realização (AAAA-MM-DD)</label><input id="erData" value="${r.data_realizacao||''}"></div>
+      <div class="form-group"><label>Prazo (dias)</label><input id="erPrazo" value="${r.prazo_validade_dias==null?'':r.prazo_validade_dias}"></div>
+    </div>
+    <div style="margin-top:12px;text-align:right;">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn primary" id="btnSalvarER">Salvar</button>
+    </div>`);
+  $('#btnSalvarER').onclick = async () => {
+    try {
+      await api('/api/realizacoes/'+rid, {method:'PUT', body: {
+        data_realizacao: $('#erData').value, prazo_validade_dias: $('#erPrazo').value
+      }});
+      closeModal(); viewPendencias($('#content'));
+    } catch(e){ alert(e.message); }
+  };
+};
+
+window.agendarPend = (colabId, treinId) => {
+  // open agendamento modal by navigating to agenda? Instead reuse modal
+  modal(`<h3>Agendar treinamento</h3>
+    <div class="form-grid">
+      <div class="form-group"><label>Colaborador</label><select id="agColab2"></select></div>
+      <div class="form-group"><label>Treinamento</label><select id="agTrein2"></select></div>
+      <div class="form-group"><label>Data agendada</label><input id="agData2" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+      <div class="form-group"><label>Observações</label><input id="agObs2"></div>
+    </div>
+    <div style="margin-top:12px;text-align:right;">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn primary" id="btnSalvarAgend2">Agendar</button>
+    </div>`);
+  // populate selects
+  (async () => {
+    const cols = await api('/api/colaboradores');
+    const treins = await api('/api/treinamentos');
+    $('#agColab2').innerHTML = cols.map(c=>`<option value="${c.id}" ${c.id==colabId?'selected':''}>${c.nome}</option>`).join('');
+    $('#agTrein2').innerHTML = treins.filter(t=>t.ativo).map(t=>`<option value="${t.id}" ${t.id==treinId?'selected':''}>${t.nome}</option>`).join('');
+  })();
+  $('#btnSalvarAgend2').onclick = async () => {
+    try {
+      await api('/api/agendamentos', {method:'POST', body: {
+        colaborador_id: parseInt($('#agColab2').value),
+        treinamento_id: parseInt($('#agTrein2').value),
+        data_agendada: $('#agData2').value,
+        observacoes: $('#agObs2').value
+      }});
+      closeModal(); viewPendencias($('#content'));
+    } catch(e){ alert(e.message); }
+  };
+};
+
+window.naoNecessarioPend = async (rid) => {
+  if (!confirm('Marcar este treinamento como "não necessário" para o colaborador? O registro será removido.')) return;
+  try {
+    await api('/api/realizacoes/'+rid, {method:'DELETE'});
+    viewPendencias($('#content'));
+  } catch(e){ alert(e.message); }
+};
 window.acompanhar = (rid) => {
   modal(`<h3>Acompanhar pendência</h3>
     <div class="form-group"><label>Status</label><select id="acStatus"><option value="pendente">Pendente</option><option value="em_acompanhamento">Em acompanhamento</option><option value="resolvido">Resolvido</option></select></div>
