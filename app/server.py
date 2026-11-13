@@ -99,7 +99,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return
         # API
         if path.startswith('/api/'):
-            self.handle_api(method, path, qs)
+            try:
+                self.handle_api(method, path, qs)
+            except Exception as e:
+                import traceback; traceback.print_exc()
+                try:
+                    json_resp(self, 500, {'error': str(e)})
+                except Exception:
+                    pass
             return
         # fallback index
         self.serve_static('/')
@@ -279,7 +286,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if method == 'PUT':
                 if not require_perm(self, u, 'cadastros'): return
                 body = read_body(self)
-                ok, err = models.update_colaborador(cid, body, u['id'])
+                try:
+                    ok, err = models.update_colaborador(cid, body, u['id'])
+                except Exception as e:
+                    import traceback; traceback.print_exc()
+                    json_resp(self, 500, {'error': str(e)}); return
                 if not ok: json_resp(self, 400, {'error': err}); return
                 json_resp(self, 200, {'ok': True})
                 return
