@@ -650,10 +650,10 @@ def create_agendamento(data, user_id=None):
     if not colab or colab['situacao'] != 'ativo':
         conn.close(); return None, 'Colaborador inativo ou inexistente. Não é possível agendar.'
     try:
-        conn.execute("""INSERT INTO agendamentos (colaborador_id,treinamento_id,data_agendada,status,observacoes,created_at,updated_at,created_by,updated_by)
-                        VALUES (?,?,?,?,?,?,?,?,?)""",
+        conn.execute("""INSERT INTO agendamentos (colaborador_id,treinamento_id,data_agendada,status,observacoes,profissional_realizante,created_at,updated_at,created_by,updated_by)
+                        VALUES (?,?,?,?,?,?,?,?,?,?)""",
                      (data['colaborador_id'], data['treinamento_id'], data['data_agendada'],
-                      'agendado', data.get('observacoes'), db.now_iso(), db.now_iso(), user_id, user_id))
+                      'agendado', data.get('observacoes'), (data.get('profissional_realizante') or '').strip()[:200], db.now_iso(), db.now_iso(), user_id, user_id))
         conn.commit()
         sid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
     except Exception as e:
@@ -722,6 +722,8 @@ def update_agendamento(id, data, user_id=None):
         sets.append('data_agendada=?'); params.append(data['data_agendada'])
     if 'observacoes' in data:
         sets.append('observacoes=?'); params.append(data.get('observacoes'))
+    if 'profissional_realizante' in data:
+        sets.append('profissional_realizante=?'); params.append((data.get('profissional_realizante') or '').strip()[:200])
     if not sets:
         conn.close(); return True, None
     sets.append('updated_at=?'); params.append(db.now_iso())

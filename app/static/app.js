@@ -292,6 +292,7 @@ async function viewSetores(c) {
     </div>`;
   $('#btnNovoSetor').onclick = () => modalFormSetor();
 }
+function textoSeguro(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function esc(s){ return String(s).replace(/'/g,'&#39;').replace(/"/g,'&quot;'); }
 function modalFormSetor(id=null, nome='', desc='', ativo=1) {
   modal(`<h3>${id?'Editar':'Novo'} setor</h3>
@@ -528,10 +529,10 @@ async function abrirFicha(id) {
       </tbody></table>
     </div>
     ${ags.length ? `<h4 style="margin-top:12px;">Compromissos agendados</h4>
-    <div class="table-wrap"><table><thead><tr><th>Data</th><th>Treinamento</th><th>Status</th><th>Ações</th></tr></thead><tbody>
+    <div class="table-wrap"><table><thead><tr><th>Data</th><th>Treinamento</th><th>Profissional realizante</th><th>Status</th><th>Ações</th></tr></thead><tbody>
       ${ags.map(a=>`<tr>
-        <td>${a.data_agendada_fmt}</td><td>${a.treinamento_nome}</td><td>${badge('agendado')}</td>
-        <td><button class="btn small" data-edicao="1" onclick="editarAgendDataFicha(${a.id},'${a.data_agendada}',${c.id})">Editar data</button> <button class="btn small" data-edicao="1" onclick="marcarAgendRealizadoFicha(${a.id},${c.id})">Marcar realizado</button> <button class="btn small" data-edicao="1" onclick="excluirAgendFicha(${a.id},${c.id})">Excluir</button></td>
+        <td>${a.data_agendada_fmt}</td><td>${a.treinamento_nome}</td><td>${textoSeguro(a.profissional_realizante) || '—'}</td><td>${badge('agendado')}</td>
+        <td><button class="btn small" data-edicao="1" onclick="editarAgendDataFicha(${a.id},'${a.data_agendada}',${c.id})">Editar compromisso</button> <button class="btn small" data-edicao="1" onclick="marcarAgendRealizadoFicha(${a.id},${c.id})">Marcar realizado</button> <button class="btn small" data-edicao="1" onclick="excluirAgendFicha(${a.id},${c.id})">Excluir</button></td>
       </tr>`).join('')}</tbody></table></div>` : ''}
     <div style="margin-top:12px;text-align:right;">
       <button class="btn" data-edicao="1" onclick="registrarRealizacao(${c.id})">Registrar treinamento</button>
@@ -705,11 +706,11 @@ async function viewAgenda(c) {
       <div id="agendTable"></div>
     </div>`;
   function renderAgend(list) {
-    $('#agendTable').innerHTML = `<div class="table-wrap"><table><thead><tr><th>Data</th><th>Colaborador</th><th>Treinamento</th><th>Status</th><th>Ações</th></tr></thead><tbody>
+    $('#agendTable').innerHTML = `<div class="table-wrap"><table><thead><tr><th>Data</th><th>Colaborador</th><th>Treinamento</th><th>Profissional realizante</th><th>Status</th><th>Ações</th></tr></thead><tbody>
       ${list.map(a=>`<tr>
-        <td>${a.data_agendada_fmt}</td><td>${a.colaborador_nome}</td><td>${a.treinamento_nome}</td>
+        <td>${a.data_agendada_fmt}</td><td>${a.colaborador_nome}</td><td>${a.treinamento_nome}</td><td>${textoSeguro(a.profissional_realizante) || '—'}</td>
         <td>${a.status==='realizado'?'Realizado':(a.status==='cancelado'?'Cancelado':'Agendado')}</td>
-        <td>${a.status==='agendado' ? `<button class="btn small" data-edicao="1" onclick="editarAgendData(${a.id},'${a.data_agendada}')">Editar data</button> <button class="btn small" data-edicao="1" onclick="marcarAgendRealizado(${a.id})">Marcar realizado</button> <button class="btn small" data-edicao="1" onclick="excluirAgend(${a.id},false)">Excluir</button>` :
+        <td>${a.status==='agendado' ? `<button class="btn small" data-edicao="1" onclick="editarAgendData(${a.id},'${a.data_agendada}')">Editar compromisso</button> <button class="btn small" data-edicao="1" onclick="marcarAgendRealizado(${a.id})">Marcar realizado</button> <button class="btn small" data-edicao="1" onclick="excluirAgend(${a.id},false)">Excluir</button>` :
             (a.status==='realizado' ? `<button class="btn small" data-edicao="1" onclick="excluirAgend(${a.id},true)">Excluir</button>` : '-')}</td>
       </tr>`).join('')}</tbody></table></div>`;
   }
@@ -721,6 +722,7 @@ async function viewAgenda(c) {
         <div class="form-group"><label>Colaborador</label><select id="agColab">${colaboradores.filter(c=>c.ativo||c.situacao==='ativo').map(c=>`<option value="${c.id}">${c.nome}</option>`).join('')}</select></div>
         <div class="form-group"><label>Treinamento</label><select id="agTrein">${treinamentos.filter(t=>t.ativo).map(t=>`<option value="${t.id}">${t.nome}</option>`).join('')}</select></div>
         <div class="form-group"><label>Data agendada</label><input id="agData" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+        <div class="form-group"><label>Profissional realizante do treinamento</label><input id="agProf" maxlength="200" placeholder="Nome do profissional (opcional)"></div>
         <div class="form-group"><label>Observações</label><input id="agObs"></div>
       </div>
       <div style="margin-top:12px;text-align:right;">
@@ -733,6 +735,7 @@ async function viewAgenda(c) {
           colaborador_id: parseInt($('#agColab').value),
           treinamento_id: parseInt($('#agTrein').value),
           data_agendada: $('#agData').value,
+          profissional_realizante: $('#agProf').value,
           observacoes: $('#agObs').value
         }});
         closeModal(); viewAgenda($('#content'));
@@ -756,16 +759,19 @@ window.cancelarAgend = async (id) => {
   } catch(e){ alert(e.message); }
 };
 
-window.editarAgendData = (id, current) => {
-  modal(`<h3>Editar data do compromisso</h3>
+window.editarAgendData = async (id, current) => {
+  let ag;
+  try { ag = (await api('/api/agendamentos')).find(x => x.id === id); if (!ag) throw new Error('Compromisso não encontrado.'); } catch(e) { alert(e.message); return; }
+  modal(`<h3>Editar compromisso</h3>
     <div class="form-group"><label>Nova data</label><input id="edData" type="date" value="${current||''}"></div>
+    <div class="form-group"><label>Profissional realizante do treinamento</label><input id="edProf" maxlength="200" value="${textoSeguro(ag.profissional_realizante)}"></div>
     <div style="margin-top:12px;text-align:right;">
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn primary" id="btnSalvarEdData">Salvar</button>
     </div>`);
   $('#btnSalvarEdData').onclick = async () => {
     try {
-      await api('/api/agendamentos/'+id, {method:'PUT', body: {data_agendada: $('#edData').value}});
+      await api('/api/agendamentos/'+id, {method:'PUT', body: {data_agendada: $('#edData').value, profissional_realizante: $('#edProf').value}});
       closeModal(); viewAgenda($('#content'));
     } catch(e){ alert(e.message); }
   };
@@ -988,7 +994,8 @@ window.agendarPend = (colabId, treinId) => {
       <div class="form-group"><label>Colaborador</label><select id="agColab2"></select></div>
       <div class="form-group"><label>Treinamento</label><select id="agTrein2"></select></div>
       <div class="form-group"><label>Data agendada</label><input id="agData2" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
-      <div class="form-group"><label>Observações</label><input id="agObs2"></div>
+      <div class="form-group"><label>Profissional realizante do treinamento</label><input id="agProf2" maxlength="200" placeholder="Nome do profissional (opcional)"></div>
+        <div class="form-group"><label>Observações</label><input id="agObs2"></div>
     </div>
     <div style="margin-top:12px;text-align:right;">
       <button class="btn" onclick="closeModal()">Cancelar</button>
@@ -1007,7 +1014,8 @@ window.agendarPend = (colabId, treinId) => {
         colaborador_id: parseInt($('#agColab2').value),
         treinamento_id: parseInt($('#agTrein2').value),
         data_agendada: $('#agData2').value,
-        observacoes: $('#agObs2').value
+        profissional_realizante: $('#agProf2').value,
+          observacoes: $('#agObs2').value
       }});
       closeModal(); viewPendencias($('#content'));
     } catch(e){ alert(e.message); }
@@ -1238,16 +1246,19 @@ window.cancelarAgendFicha = async (id, colabId) => {
   } catch(e){ alert(e.message); }
 };
 
-window.editarAgendDataFicha = (id, current, colabId) => {
-  modal(`<h3>Editar data do compromisso</h3>
+window.editarAgendDataFicha = async (id, current, colabId) => {
+  let ag;
+  try { ag = (await api('/api/agendamentos')).find(x => x.id === id); if (!ag) throw new Error('Compromisso não encontrado.'); } catch(e) { alert(e.message); return; }
+  modal(`<h3>Editar compromisso</h3>
     <div class="form-group"><label>Nova data</label><input id="edDataF" type="date" value="${current||''}"></div>
+    <div class="form-group"><label>Profissional realizante do treinamento</label><input id="edProfF" maxlength="200" value="${textoSeguro(ag.profissional_realizante)}"></div>
     <div style="margin-top:12px;text-align:right;">
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn primary" id="btnSalvarEdDataF">Salvar</button>
     </div>`);
   $('#btnSalvarEdDataF').onclick = async () => {
     try {
-      await api('/api/agendamentos/'+id, {method:'PUT', body: {data_agendada: $('#edDataF').value}});
+      await api('/api/agendamentos/'+id, {method:'PUT', body: {data_agendada: $('#edDataF').value, profissional_realizante: $('#edProfF').value}});
       closeModal(); abrirFicha(colabId);
     } catch(e){ alert(e.message); }
   };

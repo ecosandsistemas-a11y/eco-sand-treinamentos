@@ -173,6 +173,8 @@ def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = get_conn()
     conn.executescript(SCHEMA)
+    if "profissional_realizante" not in [r[1] for r in conn.execute("PRAGMA table_info(agendamentos)")]:
+        conn.execute("ALTER TABLE agendamentos ADD COLUMN profissional_realizante TEXT")
     # migration: add situacao column to colaboradores
     cols = [r[1] for r in conn.execute("PRAGMA table_info(colaboradores)").fetchall()]
     if 'situacao' not in cols:
