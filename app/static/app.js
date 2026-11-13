@@ -649,7 +649,6 @@ window.verHistorico = async (colabId, treinId) => {
 
 // ---------- Agenda ----------
 async function viewAgenda(c) {
-  const rows = await api('/api/realizacoes');
   const agendamentos = await api('/api/agendamentos');
   const colaboradores = await api('/api/colaboradores');
   const treinamentos = await api('/api/treinamentos');
@@ -660,42 +659,7 @@ async function viewAgenda(c) {
         <button class="btn primary" id="btnNovoAgend">Agendar treinamento</button>
       </div>
       <div id="agendTable"></div>
-    </div>
-    <div class="card" style="margin-top:12px;">
-      <h3>Agenda de vencimentos</h3>
-      <div class="filters">
-        <div class="form-group"><label>Filtro rápido</label><select id="agFiltro">
-          <option value="todos">Todos</option>
-          <option value="vencidos">Vencidos</option>
-          <option value="hoje">Vencendo hoje</option>
-          <option value="7">Próximos 7 dias</option>
-          <option value="15">Próximos 15 dias</option>
-          <option value="30">Próximos 30 dias</option>
-          <option value="60">Próximos 60 dias</option>
-          <option value="90">Próximos 90 dias</option>
-        </select></div>
-        <button class="btn" id="agAplicar">Aplicar</button>
-      </div>
-      <div id="agTable"></div>
     </div>`;
-  function renderTable(list) {
-    $('#agTable').innerHTML = `<div class="table-wrap"><table><thead><tr><th>Colaborador</th><th>Setor</th><th>Treinamento</th><th>Realização</th><th>Vencimento</th><th>Dias</th><th>Situação</th></tr></thead><tbody>
-      ${list.map(r=>`<tr><td>${r.colaborador_nome}</td><td>${r.setor_nome||''}</td><td>${r.treinamento_nome}</td><td>${r.data_realizacao_fmt}</td><td>${r.data_vencimento_fmt||'-'}</td><td>${r.dias==null?'-':r.dias}</td><td>${badge(r.status)}</td></tr>`).join('')}</tbody></table></div>`;
-  }
-  function apply() {
-    const v = $('#agFiltro').value;
-    let list = rows;
-    if (v==='vencidos') list = rows.filter(r=>r.status==='vencido');
-    else if (v==='hoje') list = rows.filter(r=>r.dias===0);
-    else if (['7','15','30','60','90'].includes(v)) {
-      const n = parseInt(v);
-      list = rows.filter(r=>r.dias!==null && r.dias>=0 && r.dias<=n);
-    }
-    renderTable(list);
-  }
-  $('#agAplicar').onclick = apply;
-  renderTable(rows);
-
   function renderAgend(list) {
     $('#agendTable').innerHTML = `<div class="table-wrap"><table><thead><tr><th>Data</th><th>Colaborador</th><th>Treinamento</th><th>Status</th><th>Ações</th></tr></thead><tbody>
       ${list.map(a=>`<tr>
