@@ -635,6 +635,21 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 json_resp(self, 200, {'ok': True})
                 return
 
+        if path.startswith('/api/agendamentos/') and method == 'DELETE':
+            if not require_perm(self, u, 'delete'): return
+            aid = int(path.split('/')[-1])
+            conn = db.get_conn()
+            ag = conn.execute("SELECT * FROM agendamentos WHERE id=?", (aid,)).fetchone()
+            if not ag:
+                conn.close(); json_resp(self, 404, {'error': 'Não encontrado.'}); return
+            if ag['realizacao_id']:
+                conn.execute("DELETE FROM realizacoes WHERE id=?", (ag['realizacao_id'],))
+            conn.execute("DELETE FROM agendamentos WHERE id=?", (aid,))
+            conn.commit()
+            conn.close()
+            json_resp(self, 200, {'ok': True})
+            return
+
         # ---- import ----
         if path == '/api/import/preview' and method == 'POST':
             if not require_perm(self, u, 'import'): return
