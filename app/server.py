@@ -140,14 +140,16 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if not row or not auth.verify_password(pw, row['password_hash'], row['salt']):
                 json_resp(self, 401, {'error': 'Usuário ou senha inválidos'})
                 return
-            token = auth.create_session(row['id'])
+            remember = bool(body.get('remember'))
+            token = auth.create_session(row['id'], remember=remember)
             u = db.row_to_dict(row)
+            maxage = 30*24*3600 if remember else 7*24*3600
             # set cookie
             self.send_response(200)
             data = json.dumps({'user': {'id':u['id'],'username':u['username'],'role':u['role'],'nome':u['nome']}, 'token': token}).encode()
             self.send_header('Content-Type','application/json; charset=utf-8')
             self.send_header('Content-Length', str(len(data)))
-            self.send_header('Set-Cookie', f'session={token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800')
+            self.send_header('Set-Cookie', f'session={token}; Path=/; HttpOnly; SameSite=Lax; Max-Age={maxage}')
             self.end_headers()
             self.wfile.write(data)
             return

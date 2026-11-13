@@ -64,8 +64,9 @@ function loginView() {
     <img src="/static/logo.png" alt="Eco Sand" style="max-width:200px;height:auto;margin-bottom:12px;" />
     <h2>Eco Sand | Gestão de Treinamentos</h2>
     <p style="color:#6b7280;font-size:13px;">Acesse com suas credenciais</p>
-    <input id="u" placeholder="Usuário" />
-    <input id="p" type="password" placeholder="Senha" />
+    <input id="u" placeholder="Usuário" autocomplete="username" />
+    <input id="p" type="password" placeholder="Senha" autocomplete="current-password" />
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;margin:8px 0;"><input type="checkbox" id="remember" /> Lembrar-me (salvar acesso)</label>
     <button class="btn primary" style="width:100%" id="btnLogin">Entrar</button>
     <div id="loginErr" style="color:#dc2626;font-size:13px;margin-top:8px;"></div>
     <p style="font-size:11px;color:#6b7280;margin-top:12px;">Padrão: admin / admin123</p>
@@ -74,7 +75,7 @@ function loginView() {
 function bindLogin() {
   $('#btnLogin').onclick = async () => {
     try {
-      const r = await api('/api/login', { method:'POST', body: { username: $('#u').value, password: $('#p').value } });
+      const r = await api('/api/login', { method:'POST', body: { username: $('#u').value, password: $('#p').value, remember: $('#remember').checked } });
       if (r.token) localStorage.setItem('eco_token', r.token);
       state.user = r.user;
       state.route = 'dashboard';
