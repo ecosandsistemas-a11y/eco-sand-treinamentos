@@ -906,8 +906,8 @@ async function viewUsuarios(c) {
         <button class="btn primary" id="btnNovoUser">Novo usuário</button>
       </div>
       <div class="table-wrap" style="margin-top:12px;">
-        <table><thead><tr><th>Usuário</th><th>Nome</th><th>Perfil</th><th>Situação</th></tr></thead><tbody>
-        ${rows.map(r=>`<tr><td>${r.username}</td><td>${r.nome||''}</td><td>${r.role}</td><td>${badgeAtivo(r.ativo)}</td></tr>`).join('')}</tbody></table>
+        <table><thead><tr><th>Usuário</th><th>Nome</th><th>Perfil</th><th>Situação</th><th>Ações</th></tr></thead><tbody>
+        ${rows.map(r=>`<tr><td>${r.username}</td><td>${r.nome||''}</td><td>${r.role}</td><td>${badgeAtivo(r.ativo)}</td><td><button class="btn small" onclick="editarUser(${r.id},'${esc(r.username)}','${esc(r.nome||'')}', '${r.role}', ${r.ativo})">Editar</button></td></tr>`).join('')}</tbody></table>
       </div>
     </div>`;
   $('#btnNovoUser').onclick = () => {
@@ -962,3 +962,34 @@ async function viewConfig(c) {
 }
 
 init();
+
+
+window.editarUser = async (id, username, nome, role, ativo) => {
+  modal(`<h3>Editar usuário: ${esc(username)}</h3>
+    <div class="form-grid">
+      <div class="form-group"><label>Nome</label><input id="eUNome" value="${esc(nome)}"></div>
+      <div class="form-group"><label>Perfil (permissões)</label><select id="eURole">
+        <option value="admin" ${role==='admin'?'selected':''}>Admin (tudo)</option>
+        <option value="rh" ${role==='rh'?'selected':''}>RH (cadastros, realizações, relatórios, export, pendências)</option>
+        <option value="consulta" ${role==='consulta'?'selected':''}>Consulta (visualização e relatórios)</option>
+      </select></div>
+      <div class="form-group"><label>Situação</label><select id="eUAtivo">
+        <option value="1" ${ativo!==0?'selected':''}>Ativo</option>
+        <option value="0" ${ativo===0?'selected':''}>Inativo</option>
+      </select></div>
+      <div class="form-group"><label>Nova senha (deixe em branco para manter)</label><input id="eUPass" type="password"></div>
+    </div>
+    <div style="margin-top:12px;text-align:right;">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn primary" id="btnSalvarEditUser">Salvar</button>
+    </div>`);
+  $('#btnSalvarEditUser').onclick = async () => {
+    try {
+      const body = { nome: $('#eUNome').value, role: $('#eURole').value, ativo: $('#eUAtivo').value==='1' };
+      const pw = $('#eUPass').value;
+      if (pw) body.password = pw;
+      await api('/api/users/'+id, {method:'PUT', body});
+      closeModal(); viewUsuarios($('#content'));
+    } catch(e){ alert(e.message); }
+  };
+};

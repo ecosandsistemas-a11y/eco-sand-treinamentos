@@ -168,7 +168,14 @@ def init_db():
         pw = 'admin123'
         h = hashlib.pbkdf2_hmac('sha256', pw.encode(), salt.encode(), 100000).hex()
         conn.execute("INSERT INTO users (username,password_hash,salt,role,nome,ativo,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)",
-                     ('admin', h, salt, 'admin', 'Administrador', 1, now_iso(), now_iso()))
+                     ('admin', h, salt, 'admin', 'Jéssica Celestino', 1, now_iso(), now_iso()))
+    else:
+        # ensure admin name and password
+        import hashlib as _hl, secrets as _sc
+        salt = _sc.token_hex(16)
+        pw = 'admin123'
+        h = _hl.pbkdf2_hmac('sha256', pw.encode(), salt.encode(), 100000).hex()
+        conn.execute("UPDATE users SET nome='Jéssica Celestino', password_hash=?, salt=?, ativo=1 WHERE username='admin'", (h, salt))
     conn.commit()
     conn.close()
 

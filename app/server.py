@@ -39,12 +39,6 @@ def current_user(handler):
     u = auth.get_user_by_token(get_token(handler))
     if u:
         return u
-    # Modo de visualização: acesso liberado como administrador
-    conn = db.get_conn()
-    row = conn.execute("SELECT * FROM users WHERE username='admin' AND ativo=1").fetchone()
-    conn.close()
-    if row:
-        return db.row_to_dict(row)
     return None
 
 def require_auth(handler):
@@ -517,6 +511,40 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 conn.close()
                 json_resp(self, 201, {'id': sid})
                 return
+
+        if path.startswith('/api/users/') and method == 'PUT':
+            if not require_perm(self, u, 'users'): return
+            uid = int(path.split('/')[-1])
+            body = read_body(self)
+            conn = db.get_conn()
+            row = conn.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
+            if not row:
+                conn.close(); json_resp(self, 404, {'error': 'Não encontrado.'}); return
+            sets=[]; params=[]
+            if body.get('nome') is not None:
+                sets.append('nome=?'); params.append(body['nome'])
+            if body.get('role') is not None:
+                sets.append('role=?'); params.append(body['role'])
+            if body.get('ativo') is not None:
+                sets.append('ativo=?'); params.append(1 if body['ativo'] else 0)
+            if body.get('password'):
+                import hashlib, secrets
+                salt = secrets.token_hex(16)
+                h = hashlib.pbkdf2_hmac('sha256', body['password'].encode(), salt.encode(), 100000).hex()
+                sets.append('password_hash=?'); params.append(h)
+                sets.append('salt=?'); params.append(salt)
+            if not sets:
+                conn.close(); json_resp(self, 400, {'error': 'Nada para atualizar.'}); return
+            sets.append('updated_at=?'); params.append(db.now_iso())
+            params.append(uid)
+            try:
+                conn.execute(f"UPDATE users SET {','.join(sets)} WHERE id=?", params)
+                conn.commit()
+            except Exception as e:
+                conn.close(); json_resp(self, 400, {'error': str(e)}); return
+            conn.close()
+            json_resp(self, 200, {'ok': True})
+            return
 
         # ---- import ----
         if path == '/api/import/preview' and method == 'POST':
