@@ -643,8 +643,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if not ag:
                 conn.close(); json_resp(self, 404, {'error': 'Não encontrado.'}); return
             if ag['realizacao_id']:
+                conn.execute("DELETE FROM pendencias_acomp WHERE realizacao_id=?", (ag['realizacao_id'],))
+                conn.execute("DELETE FROM agendamentos WHERE id=?", (aid,))
                 conn.execute("DELETE FROM realizacoes WHERE id=?", (ag['realizacao_id'],))
-            conn.execute("DELETE FROM agendamentos WHERE id=?", (aid,))
+            else:
+                conn.execute("DELETE FROM agendamentos WHERE id=?", (aid,))
             conn.commit()
             conn.close()
             json_resp(self, 200, {'ok': True})
