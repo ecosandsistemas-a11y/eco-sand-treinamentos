@@ -497,7 +497,7 @@ async function abrirFicha(id) {
   const inc = regs.filter(x=>x.status==='dados_incompletos').length;
   modal(`<h3>Ficha do colaborador</h3>
     <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
-      <div id="fotoBox" style="width:96px;height:96px;border-radius:8px;border:1px solid #ccc;overflow:hidden;background:#f3f4f6;display:flex;align-items:center;justify-content:center;">
+      <div id="fotoBox" style="width:112px;height:112px;border-radius:50%;border:2px solid #ccc;overflow:hidden;background:#f3f4f6;display:flex;align-items:center;justify-content:center;">
         ${c.foto ? `<img src="${c.foto}" style="width:100%;height:100%;object-fit:cover;">` : '<span style="color:#9ca3af;font-size:12px;">Sem foto</span>'}
       </div>
       <div>
