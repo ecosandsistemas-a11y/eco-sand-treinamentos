@@ -320,6 +320,13 @@ def update_colaborador(id, data, user_id=None):
         if 'codigo' in str(e).lower() or 'unique' in str(e).lower():
             return False,'Código já existente. Escolha outro código.'
         return False,'Erro: '+str(e)
+    # se tornou inativo, remove compromissos de agenda automaticamente
+    new_sit = data.get('situacao', old['situacao'])
+    if new_sit == 'inativo' and old['situacao'] != 'inativo':
+        conn2 = db.get_conn()
+        conn2.execute("DELETE FROM agendamentos WHERE colaborador_id=?", (id,))
+        conn2.commit()
+        conn2.close()
     conn.close()
     audit(user_id,'edicao','colaborador',id,'nome',old['nome'],data.get('nome',old['nome']),None,'manual')
     return True,None
@@ -639,6 +646,9 @@ def audit(user_id, tipo_operacao, entidade, registro_id, campo=None, valor_anter
 # ---------- agendamentos ----------
 def create_agendamento(data, user_id=None):
     conn = db.get_conn()
+    colab = conn.execute("SELECT situacao FROM colaboradores WHERE id=?", (data['colaborador_id'],)).fetchone()
+    if not colab or colab['situacao'] != 'ativo':
+        conn.close(); return None, 'Colaborador inativo ou inexistente. Não é possível agendar.'
     try:
         conn.execute("""INSERT INTO agendamentos (colaborador_id,treinamento_id,data_agendada,status,observacoes,created_at,updated_at,created_by,updated_by)
                         VALUES (?,?,?,?,?,?,?,?,?)""",
@@ -657,7 +667,7 @@ def list_agendamentos(filtros=None):
            FROM agendamentos a
            JOIN colaboradores c ON c.id=a.colaborador_id
            JOIN treinamentos t ON t.id=a.treinamento_id
-           WHERE 1=1"""
+           WHERE c.situacao != 'inativo'"""
     params=[]
     if filtros:
         if filtros.get('status'):

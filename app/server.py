@@ -363,7 +363,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         # ---- pendencias ----
         if path == '/api/pendencias':
             if method == 'GET':
-                regs = models.list_realizacoes({'excluir_afastados': True})
+                regs = models.list_realizacoes({'colab_ativo': True})
                 # filter to vencido/proximo/incompleto
                 items = [r for r in regs if r['status'] in ('vencido','proximo','dados_incompletos')]
                 # attach acomp

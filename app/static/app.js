@@ -673,7 +673,7 @@ async function viewAgenda(c) {
   $('#btnNovoAgend').onclick = () => {
     modal(`<h3>Agendar treinamento</h3>
       <div class="form-grid">
-        <div class="form-group"><label>Colaborador</label><select id="agColab">${colaboradores.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('')}</select></div>
+        <div class="form-group"><label>Colaborador</label><select id="agColab">${colaboradores.filter(c=>c.ativo||c.situacao==='ativo').map(c=>`<option value="${c.id}">${c.nome}</option>`).join('')}</select></div>
         <div class="form-group"><label>Treinamento</label><select id="agTrein">${treinamentos.filter(t=>t.ativo).map(t=>`<option value="${t.id}">${t.nome}</option>`).join('')}</select></div>
         <div class="form-group"><label>Data agendada</label><input id="agData" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
         <div class="form-group"><label>Observações</label><input id="agObs"></div>
@@ -922,7 +922,7 @@ window.agendarPend = (colabId, treinId) => {
   (async () => {
     const cols = await api('/api/colaboradores');
     const treins = await api('/api/treinamentos');
-    $('#agColab2').innerHTML = cols.map(c=>`<option value="${c.id}" ${c.id==colabId?'selected':''}>${c.nome}</option>`).join('');
+    $('#agColab2').innerHTML = cols.filter(c=>c.ativo||c.situacao==='ativo').map(c=>`<option value="${c.id}" ${c.id==colabId?'selected':''}>${c.nome}</option>`).join('');
     $('#agTrein2').innerHTML = treins.filter(t=>t.ativo).map(t=>`<option value="${t.id}" ${t.id==treinId?'selected':''}>${t.nome}</option>`).join('');
   })();
   $('#btnSalvarAgend2').onclick = async () => {
