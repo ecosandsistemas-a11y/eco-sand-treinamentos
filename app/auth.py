@@ -37,7 +37,7 @@ def delete_session(token):
 
 PERMS = {
     'admin': {'users','config','import','delete','audit','all'},
-    'tecnico_seguranca': {'cadastros','realizacoes','relatorios','export','pendencias'},
+    'tecnico_seguranca': {'cadastros','realizacoes','relatorios','export','pendencias','config','import','delete','audit'},
     'consulta': {'view','relatorios'},
 }
 

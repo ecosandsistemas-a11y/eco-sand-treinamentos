@@ -106,9 +106,10 @@ function layoutView() {
     ['pendencias','Pendências'],
     ['perfil','Meu Perfil'],
   ];
-  if (isAdmin) {
-    links.push(['importacao','Importação']);
-    links.push(['usuarios','Usuários']);
+  const podeAdministrarOperacao = isAdmin || (state.user && state.user.role === 'tecnico_seguranca');
+  if (podeAdministrarOperacao) links.push(['importacao','Importação']);
+  if (isAdmin) links.push(['usuarios','Usuários']);
+  if (podeAdministrarOperacao) {
     links.push(['auditoria','Auditoria']);
     links.push(['config','Configurações']);
   }
@@ -598,7 +599,7 @@ async function viewRealizacoes(c) {
     if ($('#rfStatus').value) qs.set('status', $('#rfStatus').value);
     if ($('#rfAno').value) qs.set('ano', $('#rfAno').value);
     const rows = await api('/api/realizacoes?'+qs.toString());
-    const realizados = state.user.role === 'admin' ? await api('/api/agendamentos?status=realizado') : [];
+    const realizados = ['admin','tecnico_seguranca'].includes(state.user.role) ? await api('/api/agendamentos?status=realizado') : [];
     const porRealizacao = new Map(realizados.filter(a => a.realizacao_id).map(a => [a.realizacao_id, a.id]));
     $('#realTable').innerHTML = `<div class="table-wrap"><table><thead><tr><th>Colaborador</th><th>Treinamento</th><th>Setor</th><th>Última realização</th><th>Prazo</th><th>Vencimento</th><th>Dias</th><th>Situação</th><th>Ações</th></tr></thead><tbody>
       ${rows.map(r=>`<tr>
@@ -1218,7 +1219,7 @@ window.editarUser = async (id, username, nome, role, ativo, colaborador_id) => {
       <div class="form-group"><label>Nome</label><input id="eUNome" value="${esc(nome)}"></div>
       <div class="form-group"><label>Perfil (permissões)</label><select id="eURole">
         <option value="admin" ${role==='admin'?'selected':''}>Admin (tudo)</option>
-        <option value="tecnico_seguranca" ${role==='tecnico_seguranca'?'selected':''}>Técnico de Segurança (cadastros, realizações, relatórios, export, pendências)</option>
+        <option value="tecnico_seguranca" ${role==='tecnico_seguranca'?'selected':''}>Técnico de Segurança (todas as funções, exceto gestão de usuários)</option>
         <option value="consulta" ${role==='consulta'?'selected':''}>Consulta (visualização e relatórios)</option>
       </select></div>
       <div class="form-group"><label>Situação</label><select id="eUAtivo">
