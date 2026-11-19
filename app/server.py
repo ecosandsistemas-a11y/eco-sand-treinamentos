@@ -154,6 +154,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.wfile.write(data)
             return
         if path == '/api/logout' and method == 'POST':
+            read_body(self)  # consume any request body before reusing the connection
             t = get_token(self)
             if t: auth.delete_session(t)
             data = b'{"ok":true}'
@@ -163,7 +164,6 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send_header('Set-Cookie','session=; Path=/; Max-Age=0')
             self.end_headers()
             self.wfile.write(data)
-            self.wfile.write(b'{"ok":true}')
             return
         if path == '/api/me' and method == 'GET':
             u = current_user(self)

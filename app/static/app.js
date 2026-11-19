@@ -132,7 +132,25 @@ function layoutView() {
   <div class="modal-backdrop ${state.user && state.user.role === 'consulta' ? 'somente-consulta' : ''}" id="modalBackdrop"><div class="modal" id="modal"></div></div>`;
 }
 function bindLayout() {
-  $('#logout').onclick = async (e) => { e.preventDefault(); await api('/api/logout',{method:'POST'}); localStorage.removeItem('eco_token'); state.user=null; state.route='dashboard'; try { history.replaceState(null,'','#'); } catch(e){} render(); };
+  $('#logout').onclick = async (e) => {
+    e.preventDefault();
+    const link = e.currentTarget;
+    if (link.dataset.saindo) return;
+    link.dataset.saindo = '1';
+    link.textContent = 'Saindo...';
+    try {
+      await api('/api/logout', {method:'POST', signal: AbortSignal.timeout(10000)});
+      localStorage.removeItem('eco_token');
+      state.user = null;
+      state.route = 'dashboard';
+      try { history.replaceState(null, '', '#'); } catch(e) {}
+      render();
+    } catch (err) {
+      link.dataset.saindo = '';
+      link.textContent = 'Sair';
+      alert('Não foi possível encerrar a sessão. Verifique sua conexão e tente novamente.');
+    }
+  };
   $('#ham').onclick = () => $('#sidebar').classList.toggle('open');
   $('#themeToggle').onclick = () => {
     const dark = !document.body.classList.contains('dark');
