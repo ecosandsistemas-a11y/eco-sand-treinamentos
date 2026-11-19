@@ -1,4 +1,4 @@
-import openpyxl, db, models, os, datetime
+import openpyxl, db, models, os, datetime, re
 
 def read_workbook(path):
     return openpyxl.load_workbook(path, data_only=True)
@@ -158,6 +158,9 @@ def commit(path, user_id=None, username=None):
     # treinamentos
     trein_map = {}
     for t in data['treinamentos']:
+        m = re.fullmatch(r'Treinamento\s+(\d+)', t.strip(), re.IGNORECASE)
+        if m and int(m.group(1)) >= 16 and not any(l['treinamento'] == t for l in data['lancamentos']):
+            continue
         row = conn.execute("SELECT id FROM treinamentos WHERE nome=?", (t,)).fetchone()
         if row:
             trein_map[t] = row['id']
@@ -196,10 +199,10 @@ def commit(path, user_id=None, username=None):
         colab_id = colab_map[cname]
         trein_id = trein_map[tname]
         data_real = l['data_realizacao']
-        prazo = l['prazo']
-        # idempotency: check existing identical
-        existing = conn.execute("""SELECT id FROM realizacoes WHERE colaborador_id=? AND treinamento_id=? AND data_realizacao IS ? AND prazo_validade_dias IS ?""",
-                                (colab_id, trein_id, data_real, prazo)).fetchone()
+        prazo = conn.execute('SELECT prazo_validade_dias FROM treinamentos WHERE id=?', (trein_id,)).fetchone()['prazo_validade_dias']
+        # O prazo é determinado pelo cadastro e pode ter mudado desde a última importação.
+        existing = conn.execute("""SELECT id FROM realizacoes WHERE colaborador_id=? AND treinamento_id=? AND data_realizacao IS ?""",
+                                (colab_id, trein_id, data_real)).fetchone()
         if existing:
             skipped += 1
             continue

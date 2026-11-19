@@ -225,12 +225,21 @@ def update_treinamento(id, data, user_id=None):
     fields = ['codigo','nome','descricao','categoria','prazo_validade_dias','ativo','observacoes']
     sets=[]; params=[]
     for f in fields:
-        if f in data and data[f] is not None:
+        if f in data and (data[f] is not None or f == 'prazo_validade_dias'):
+            if f == 'prazo_validade_dias' and data[f] is not None and (not isinstance(data[f], int) or isinstance(data[f], bool) or data[f] < 0):
+                conn.close(); return False, 'Prazo deve ser um número inteiro não negativo.'
             sets.append(f+'=?')
             params.append(data[f])
     sets.append('updated_at=?'); params.append(db.now_iso())
     params.append(id)
     conn.execute(f"UPDATE treinamentos SET {','.join(sets)} WHERE id=?", params)
+    if 'prazo_validade_dias' in data and old['prazo_validade_dias'] != data['prazo_validade_dias']:
+        prazo = data['prazo_validade_dias']
+        for r in conn.execute('SELECT id,data_realizacao,prazo_validade_dias,data_vencimento FROM realizacoes WHERE treinamento_id=?', (id,)).fetchall():
+            venc = calc_vencimento(r['data_realizacao'], prazo)
+            conn.execute('UPDATE realizacoes SET prazo_validade_dias=?, data_vencimento=?, updated_at=?, updated_by=? WHERE id=?', (prazo,venc,db.now_iso(),user_id,r['id']))
+            conn.execute('INSERT INTO auditoria (user_id,data_hora,tipo_operacao,entidade,registro_id,campo,valor_anterior,valor_novo,motivo,origem) VALUES (?,?,?,?,?,?,?,?,?,?)',
+                         (user_id,db.now_iso(),'edicao','realizacao',r['id'],'validade',json.dumps({'prazo':r['prazo_validade_dias'],'vencimento':r['data_vencimento']}),json.dumps({'prazo':prazo,'vencimento':venc}),'Alteração do cadastro do treinamento','manual'))
     conn.commit()
     conn.close()
     audit(user_id,'edicao','treinamento',id,'nome',old['nome'],data.get('nome',old['nome']),None,'manual')
@@ -340,15 +349,7 @@ def create_realizacao(data, user_id=None, username=None):
     if not colab or not trein:
         conn.close(); return None,'Colaborador ou treinamento inválido.'
     data_real = parse_date(data.get('data_realizacao'))
-    prazo = data.get('prazo_validade_dias')
-    if prazo is not None and prazo != '':
-        try: prazo = int(prazo)
-        except: prazo = None
-    else:
-        prazo = trein['prazo_validade_dias'] if trein['prazo_validade_dias'] is not None else None
-        # if user explicitly passed empty, keep None
-        if 'prazo_validade_dias' in data and (data['prazo_validade_dias'] is None or data['prazo_validade_dias']==''):
-            prazo = None
+    prazo = trein['prazo_validade_dias']
     venc = calc_vencimento(data_real, prazo)
     # historical setor/cargo
     setor_hist = colab_setor_name(conn, colab['id']) if False else None
@@ -378,12 +379,8 @@ def update_realizacao(id, data, user_id=None, username=None, motivo=None):
     old = conn.execute("SELECT * FROM realizacoes WHERE id=?", (id,)).fetchone()
     if not old: conn.close(); return False,'Não encontrado.'
     data_real = parse_date(data.get('data_realizacao', old['data_realizacao']))
-    prazo = data.get('prazo_validade_dias', old['prazo_validade_dias'])
-    if prazo is not None and prazo != '':
-        try: prazo = int(prazo)
-        except: prazo = old['prazo_validade_dias']
-    else:
-        prazo = None
+    trein = conn.execute('SELECT prazo_validade_dias FROM treinamentos WHERE id=?', (old['treinamento_id'],)).fetchone()
+    prazo = trein['prazo_validade_dias']
     venc = calc_vencimento(data_real, prazo)
     sets=[]; params=[]
     sets.append('data_realizacao=?'); params.append(data_real)
@@ -617,7 +614,7 @@ def dashboard(filtros=None):
             por_ano[y] = por_ano.get(y,0)+1
     # vencimentos por dia do mes (para relatorio mensal) handled separately
     # prioridades
-    prio = sorted([r for r in regs if r['status'] in ('vencido','proximo')], key=lambda x: (0 if x['status']=='vencido' else 1, x['data_vencimento'] or '9999'))
+    prio = sorted([r for r in regs if r['colaborador_situacao'] == 'ativo' and r['status'] in ('vencido','proximo')], key=lambda x: (0 if x['status']=='vencido' else 1, x['data_vencimento'] or '9999'))
     return {
         'total': total, 'em_dia': em_dia, 'proximo': proximo, 'vencido': vencido, 'incompleto': incompleto,
         'colabs_vencido': len(colabs_venc), 'colabs_proximo': len(colabs_prox),

@@ -402,7 +402,7 @@ function modalFormTrein(id=null, data={}) {
       <div class="form-group"><label>Nome</label><input id="tNome" value="${esc(data.nome||'')}"></div>
       <div class="form-group"><label>Código</label><input id="tCod" value="${esc(data.codigo||'')}"></div>
       <div class="form-group"><label>Categoria</label><input id="tCat" value="${esc(data.categoria||'')}"></div>
-      <div class="form-group"><label>Prazo de validade (dias)</label><input id="tPrazo" type="number" value="${data.prazo_validade_dias==null?'':data.prazo_validade_dias}" placeholder="vazio = sem validade"></div>
+      <div class="form-group"><label>Prazo de validade (dias)</label><input id="tPrazo" type="number" min="0" value="${data.prazo_validade_dias==null?'':data.prazo_validade_dias}" placeholder="vazio = sem validade"></div>
       <div class="form-group"><label>Descrição</label><input id="tDesc" value="${esc(data.descricao||'')}"></div>
       <div class="form-group"><label>Observações</label><input id="tObs" value="${esc(data.observacoes||'')}"></div>
     </div>
@@ -417,6 +417,7 @@ function modalFormTrein(id=null, data={}) {
         descricao: $('#tDesc').value, observacoes: $('#tObs').value,
         prazo_validade_dias: $('#tPrazo').value===''? null : parseInt($('#tPrazo').value)
       };
+      if (id && body.prazo_validade_dias !== (data.prazo_validade_dias ?? null) && !confirm('Alterar o prazo recalculará os vencimentos de todas as realizações deste treinamento, inclusive as anteriores. Confirma?')) return;
       if (id) await api('/api/treinamentos/'+id, {method:'PUT', body});
       else await api('/api/treinamentos', {method:'POST', body});
       closeModal(); viewTreinamentos($('#content'));
@@ -653,13 +654,13 @@ async function modalFormReal(id=null, data={}) {
   const treins = await api('/api/treinamentos');
   modal(`<h3>${id?'Editar':'Nova'} realização</h3>
     <div class="form-grid">
-      <div class="form-group"><label>Colaborador</label><select id="rColab">${colabs.map(x=>`<option value="${x.id}" ${data.colaborador_id==x.id?'selected':''}>${x.nome}</option>`).join('')}</select></div>
-      <div class="form-group"><label>Treinamento</label><select id="rTrein">${treins.map(x=>`<option value="${x.id}" ${data.treinamento_id==x.id?'selected':''}>${x.nome}</option>`).join('')}</select></div>
+      <div class="form-group"><label>Colaborador</label><select id="rColab" ${id ? 'disabled' : ''}>${colabs.map(x=>`<option value="${x.id}" ${data.colaborador_id==x.id?'selected':''}>${x.nome}</option>`).join('')}</select></div>
+      <div class="form-group"><label>Treinamento</label><select id="rTrein" ${id ? 'disabled' : ''}>${treins.map(x=>`<option value="${x.id}" ${data.treinamento_id==x.id?'selected':''}>${x.nome}</option>`).join('')}</select></div>
       <div class="form-group"><label>Data da realização</label><input id="rData" value="${data.data_realizacao||''}" placeholder="AAAA-MM-DD"></div>
-      <div class="form-group"><label>Prazo de validade (dias)</label><input id="rPrazo" type="number" value="${data.prazo_validade_dias==null?'':data.prazo_validade_dias}" placeholder="vazio = usar padrão do treinamento"></div>
       <div class="form-group"><label>Observações</label><input id="rObs" value="${esc(data.observacoes||'')}"></div>
       <div class="form-group"><label>Motivo (se correção)</label><input id="rMotivo" value=""></div>
     </div>
+    <p>O prazo e o vencimento são calculados automaticamente pelo cadastro do treinamento.</p>
     <div style="margin-top:12px;text-align:right;">
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn primary" id="btnSalvarReal">Salvar</button>
@@ -670,7 +671,6 @@ async function modalFormReal(id=null, data={}) {
         colaborador_id: parseInt($('#rColab').value),
         treinamento_id: parseInt($('#rTrein').value),
         data_realizacao: $('#rData').value,
-        prazo_validade_dias: $('#rPrazo').value===''? null : parseInt($('#rPrazo').value),
         observacoes: $('#rObs').value,
         motivo: $('#rMotivo').value
       };
@@ -688,9 +688,9 @@ window.registrarRealizacao = async (colabId, treinId=null) => {
       <div class="form-group"><label>Colaborador</label><select id="rColab">${colabs.map(x=>`<option value="${x.id}" ${colabId==x.id?'selected':''}>${x.nome}</option>`).join('')}</select></div>
       <div class="form-group"><label>Treinamento</label><select id="rTrein">${treins.map(x=>`<option value="${x.id}" ${treinId==x.id?'selected':''}>${x.nome}</option>`).join('')}</select></div>
       <div class="form-group"><label>Data da realização</label><input id="rData" placeholder="AAAA-MM-DD" value="${new Date().toISOString().slice(0,10)}"></div>
-      <div class="form-group"><label>Prazo de validade (dias)</label><input id="rPrazo" type="number" placeholder="vazio = padrão"></div>
       <div class="form-group"><label>Observações</label><input id="rObs"></div>
     </div>
+    <p>O prazo e o vencimento são calculados automaticamente pelo cadastro do treinamento.</p>
     <div style="margin-top:12px;text-align:right;">
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn primary" id="btnSalvarReal2">Salvar</button>
@@ -701,7 +701,6 @@ window.registrarRealizacao = async (colabId, treinId=null) => {
         colaborador_id: parseInt($('#rColab').value),
         treinamento_id: parseInt($('#rTrein').value),
         data_realizacao: $('#rData').value,
-        prazo_validade_dias: $('#rPrazo').value===''? null : parseInt($('#rPrazo').value),
         observacoes: $('#rObs').value
       };
       await api('/api/realizacoes', {method:'POST', body});
@@ -1000,10 +999,9 @@ function acoesPendencia(r) {
 
 window.editarRealizacaoPend = async (rid) => {
   const r = await api('/api/realizacoes/'+rid);
-  modal(`<h3>Editar realização (dados incompletos)</h3>
+  modal(`<h3>Editar realização (dados incompletos)</h3><p>O prazo é definido no cadastro do treinamento. Se estiver vazio, atualize-o em Treinamentos / Cursos.</p>
     <div class="form-grid">
       <div class="form-group"><label>Data realização (AAAA-MM-DD)</label><input id="erData" value="${r.data_realizacao||''}"></div>
-      <div class="form-group"><label>Prazo (dias)</label><input id="erPrazo" value="${r.prazo_validade_dias==null?'':r.prazo_validade_dias}"></div>
     </div>
     <div style="margin-top:12px;text-align:right;">
       <button class="btn" onclick="closeModal()">Cancelar</button>
@@ -1012,7 +1010,7 @@ window.editarRealizacaoPend = async (rid) => {
   $('#btnSalvarER').onclick = async () => {
     try {
       await api('/api/realizacoes/'+rid, {method:'PUT', body: {
-        data_realizacao: $('#erData').value, prazo_validade_dias: $('#erPrazo').value
+        data_realizacao: $('#erData').value
       }});
       closeModal(); viewPendencias($('#content'));
     } catch(e){ alert(e.message); }

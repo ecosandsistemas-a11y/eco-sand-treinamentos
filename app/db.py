@@ -1,4 +1,4 @@
-import sqlite3, os, datetime, hashlib, secrets
+import sqlite3, os, datetime, hashlib, secrets, json, re
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.environ.get('DATA_DIR', os.path.join(BASE_DIR, 'data'))
@@ -169,6 +169,38 @@ CREATE INDEX IF NOT EXISTS idx_agend_colab ON agendamentos(colaborador_id);
 CREATE INDEX IF NOT EXISTS idx_agend_status ON agendamentos(status);
 '''
 
+def padronizar_prazos_e_limpar_cursos(conn):
+    # Executado uma única vez; os valores anteriores ficam na auditoria.
+    chave = 'migracao_prazos_cursos_v1'
+    if conn.execute('SELECT 1 FROM configuracoes WHERE chave=?', (chave,)).fetchone():
+        return
+    now = now_iso()
+    rows = conn.execute("""SELECT r.id,r.data_realizacao,r.prazo_validade_dias,r.data_vencimento,
+                                  t.prazo_validade_dias AS prazo_curso
+                           FROM realizacoes r JOIN treinamentos t ON t.id=r.treinamento_id""").fetchall()
+    for r in rows:
+        prazo = r['prazo_curso']
+        try:
+            venc = (datetime.date.fromisoformat(r['data_realizacao']) + datetime.timedelta(days=int(prazo))).isoformat() if r['data_realizacao'] and prazo is not None else None
+        except (ValueError, TypeError, OverflowError):
+            venc = None
+        if r['prazo_validade_dias'] != prazo or r['data_vencimento'] != venc:
+            antes = json.dumps({'prazo':r['prazo_validade_dias'],'vencimento':r['data_vencimento']}, ensure_ascii=False)
+            depois = json.dumps({'prazo':prazo,'vencimento':venc}, ensure_ascii=False)
+            conn.execute("INSERT INTO auditoria (data_hora,tipo_operacao,entidade,registro_id,campo,valor_anterior,valor_novo,motivo,origem) VALUES (?,?,?,?,?,?,?,?,?)",
+                         (now,'edicao','realizacao',r['id'],'validade',antes,depois,'Padronização autorizada: validade do cadastro do treinamento','migracao'))
+            conn.execute('UPDATE realizacoes SET prazo_validade_dias=?, data_vencimento=?, updated_at=? WHERE id=?', (prazo,venc,now,r['id']))
+    for t in conn.execute('SELECT id,nome FROM treinamentos').fetchall():
+        match = re.fullmatch(r'Treinamento\s+(\d+)', t['nome'].strip(), re.IGNORECASE)
+        if not match or int(match.group(1)) < 16:
+            continue
+        # Nunca apagar curso que tenha dados vinculados.
+        if conn.execute('SELECT 1 FROM realizacoes WHERE treinamento_id=? LIMIT 1',(t['id'],)).fetchone() or conn.execute('SELECT 1 FROM agendamentos WHERE treinamento_id=? LIMIT 1',(t['id'],)).fetchone():
+            continue
+        conn.execute("INSERT INTO auditoria (data_hora,tipo_operacao,entidade,registro_id,campo,valor_anterior,motivo,origem) VALUES (?,?,?,?,?,?,?,?)", (now,'exclusao','treinamento',t['id'],'nome',t['nome'],'Remoção de curso genérico sem vínculos','migracao'))
+        conn.execute('DELETE FROM treinamentos WHERE id=?',(t['id'],))
+    conn.execute('INSERT INTO configuracoes(chave,valor,updated_at) VALUES (?,?,?)',(chave,'concluida',now))
+
 def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = get_conn()
@@ -205,6 +237,7 @@ def init_db():
     ucols = [r[1] for r in conn.execute("PRAGMA table_info(users)").fetchall()]
     if 'colaborador_id' not in ucols:
         conn.execute("ALTER TABLE users ADD COLUMN colaborador_id INTEGER")
+    padronizar_prazos_e_limpar_cursos(conn)
     conn.commit()
     conn.close()
 
